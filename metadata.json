@@ -1,0 +1,6 @@
+{
+  "name": "Catálogo Google Drive",
+  "description": "Catálogo interactivo de productos conectado a carpetas de Google Drive con carrusel destacado y pedidos por WhatsApp.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
