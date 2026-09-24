@@ -20,6 +20,7 @@ import { CartDrawer } from './components/CartDrawer';
 import { ProductModal } from './components/ProductModal';
 import { FolderSettingsModal } from './components/FolderSettingsModal';
 import { AdminLoginModal } from './components/AdminLoginModal';
+import { WhatsAppSettingsModal } from './components/WhatsAppSettingsModal';
 import { Footer } from './components/Footer';
 import {
   FolderSearch,
@@ -28,12 +29,23 @@ import {
   ArrowUp,
   Sparkles
 } from 'lucide-react';
-import { WHATSAPP_NUMBER } from './utils/whatsapp';
+import { getStoredWhatsappNumber, setStoredWhatsappNumber } from './utils/whatsapp';
 
 export default function App() {
   // Authentication & Drive token state
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+
+  // WhatsApp configuration state
+  const [whatsappNumber, setWhatsappNumber] = useState<string>(() => {
+    return getStoredWhatsappNumber();
+  });
+  const [isWhatsappModalOpen, setIsWhatsappModalOpen] = useState<boolean>(false);
+
+  const handleSaveWhatsappNumber = (newNumber: string) => {
+    const cleaned = setStoredWhatsappNumber(newNumber);
+    setWhatsappNumber(cleaned);
+  };
 
   // Drive Folder configuration
   const [folderId, setFolderId] = useState<string>(() => {
@@ -265,6 +277,8 @@ export default function App() {
         onOpenSettings={() => setIsSettingsOpen(true)}
         isAdmin={isAdmin}
         onLogoutAdmin={handleLogoutAdmin}
+        whatsappNumber={whatsappNumber}
+        onSaveWhatsapp={handleSaveWhatsappNumber}
       />
 
       {/* Main Sticky Navbar with Frosted Dark Glass Theme */}
@@ -298,6 +312,7 @@ export default function App() {
                 slides={catalog.carouselImages}
                 onOpenImage={handleOpenSlideModal}
                 onExploreClick={handleScrollToCategories}
+                whatsappNumber={whatsappNumber}
               />
             )}
 
@@ -344,6 +359,7 @@ export default function App() {
                       onAddToCart={handleAddToCart}
                       onOpenModal={setSelectedProduct}
                       cartProductIds={cartProductIds}
+                      whatsappNumber={whatsappNumber}
                     />
                   ))}
                 </div>
@@ -385,6 +401,7 @@ export default function App() {
       <Footer
         folderName={catalog?.folderName || 'CATÁLOGO VIRTUAL'}
         totalProducts={catalog?.totalProducts || 0}
+        whatsappNumber={whatsappNumber}
       />
 
       {/* Shopping Cart Drawer */}
@@ -395,6 +412,7 @@ export default function App() {
         onUpdateQuantity={handleUpdateQuantity}
         onRemoveItem={handleRemoveFromCart}
         onClearCart={handleClearCart}
+        whatsappNumber={whatsappNumber}
       />
 
       {/* Product Detail Lightbox Modal */}
@@ -403,6 +421,7 @@ export default function App() {
         onClose={() => setSelectedProduct(null)}
         onAddToCart={handleAddToCart}
         isInCart={selectedProduct ? cartProductIds.has(selectedProduct.id) : false}
+        whatsappNumber={whatsappNumber}
       />
 
       {/* Folder Settings / Drive Config Modal */}
@@ -420,6 +439,8 @@ export default function App() {
           setIsAdminLoginOpen(true);
         }}
         onLogoutAdmin={handleLogoutAdmin}
+        whatsappNumber={whatsappNumber}
+        onSaveWhatsapp={handleSaveWhatsappNumber}
       />
 
       {/* Admin Login Modal */}
@@ -427,6 +448,15 @@ export default function App() {
         isOpen={isAdminLoginOpen}
         onClose={() => setIsAdminLoginOpen(false)}
         onLoginSuccess={handleLoginAdminSuccess}
+      />
+
+      {/* Dedicated WhatsApp Settings Modal */}
+      <WhatsAppSettingsModal
+        isOpen={isWhatsappModalOpen}
+        onClose={() => setIsWhatsappModalOpen(false)}
+        currentWhatsappNumber={whatsappNumber}
+        onSave={handleSaveWhatsappNumber}
+        onRefresh={() => loadCatalogData(folderId, token)}
       />
 
       {/* Floating Action Buttons (WhatsApp + Scroll To Top) */}
@@ -443,7 +473,7 @@ export default function App() {
 
         {/* Floating WhatsApp Quick Contact Button */}
         <a
-          href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+          href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
             '¡Hola! 👋 Estoy viendo su catálogo web y deseo hacer una consulta.'
           )}`}
           target="_blank"

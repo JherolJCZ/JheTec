@@ -8,21 +8,25 @@ import {
   Maximize2,
   ArrowRight
 } from 'lucide-react';
-import { WHATSAPP_NUMBER } from '../utils/whatsapp';
+import { getStoredWhatsappNumber, cleanWhatsappNumber } from '../utils/whatsapp';
 
 interface HeroCarouselProps {
   slides: CarouselSlide[];
   onOpenImage: (slide: CarouselSlide) => void;
   onExploreClick?: () => void;
+  whatsappNumber?: string;
 }
 
 export const HeroCarousel: React.FC<HeroCarouselProps> = ({
   slides,
   onOpenImage,
   onExploreClick,
+  whatsappNumber,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+
+  const activeWhatsappNumber = whatsappNumber ? cleanWhatsappNumber(whatsappNumber) : getStoredWhatsappNumber();
 
   const nextSlide = useCallback(() => {
     setCurrentIndex((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
@@ -54,7 +58,7 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({
       (slide.id ? `https://drive.google.com/file/d/${slide.id}/view` : '');
     const message = `¡Hola! Estoy interesado(a) en comprar este producto *${name}*: ${link}\n¿Tienen disponibilidad para envío o entrega? ¡Muchas gracias!`;
     const text = encodeURIComponent(message);
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${text}`, '_blank');
+    window.open(`https://wa.me/${activeWhatsappNumber}?text=${text}`, '_blank');
   };
 
   return (

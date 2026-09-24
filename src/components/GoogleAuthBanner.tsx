@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { User } from 'firebase/auth';
-import { RefreshCw, FolderPlus, LogOut, AlertCircle, ShieldCheck } from 'lucide-react';
+import { RefreshCw, FolderPlus, LogOut, AlertCircle, ShieldCheck, MessageCircle, CheckCircle } from 'lucide-react';
 import { logoutGoogle } from '../services/firebase';
+import { formatWhatsappDisplay } from '../utils/whatsapp';
 
 interface GoogleAuthBannerProps {
   user: User | null;
@@ -11,6 +12,8 @@ interface GoogleAuthBannerProps {
   onOpenSettings: () => void;
   isAdmin: boolean;
   onLogoutAdmin: () => void;
+  whatsappNumber: string;
+  onSaveWhatsapp: (newNumber: string) => void;
 }
 
 export const GoogleAuthBanner: React.FC<GoogleAuthBannerProps> = ({
@@ -20,8 +23,17 @@ export const GoogleAuthBanner: React.FC<GoogleAuthBannerProps> = ({
   onOpenSettings,
   isAdmin,
   onLogoutAdmin,
+  whatsappNumber,
+  onSaveWhatsapp,
 }) => {
-  const [authError] = React.useState<string | null>(null);
+  const [authError] = useState<string | null>(null);
+  const [isEditingWhatsapp, setIsEditingWhatsapp] = useState(false);
+  const [whatsappInput, setWhatsappInput] = useState(whatsappNumber);
+  const [notificationMsg, setNotificationMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    setWhatsappInput(whatsappNumber);
+  }, [whatsappNumber]);
 
   const handleSignOut = async () => {
     try {
@@ -32,6 +44,27 @@ export const GoogleAuthBanner: React.FC<GoogleAuthBannerProps> = ({
     }
   };
 
+  const handleActualizar = () => {
+    let updatedWhatsapp = false;
+    let newDisplay = '';
+    if (isEditingWhatsapp) {
+      const clean = whatsappInput.replace(/[^\d]/g, '');
+      if (clean) {
+        onSaveWhatsapp(clean);
+        newDisplay = formatWhatsappDisplay(clean);
+        updatedWhatsapp = true;
+      }
+      setIsEditingWhatsapp(false);
+    }
+
+    onRefresh();
+
+    if (updatedWhatsapp) {
+      setNotificationMsg(`¡WhatsApp actualizado a ${newDisplay}!`);
+      setTimeout(() => setNotificationMsg(null), 3500);
+    }
+  };
+
   // Only visible when admin is logged in
   if (!isAdmin) {
     return null;
@@ -39,14 +72,22 @@ export const GoogleAuthBanner: React.FC<GoogleAuthBannerProps> = ({
 
   return (
     <div className="top-navy-bar text-slate-300 relative z-40">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-between gap-3 text-xs">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-between gap-3 text-xs flex-wrap">
         {/* Left: Admin Mode Badge */}
         <div className="flex items-center gap-2 text-cyan-300 font-semibold">
           <ShieldCheck className="w-4 h-4 text-cyan-400" />
-          <span className="text-xs">Modo Administrador: <strong className="text-white">JheTec</strong></span>
+          <span className="text-xs">
+            Modo Administrador: <strong className="text-white">JheTec</strong>
+          </span>
+          {notificationMsg && (
+            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-950/90 text-emerald-300 border border-emerald-500/40 rounded-lg text-[11px] animate-fade-in font-medium">
+              <CheckCircle className="w-3 h-3 text-emerald-400" />
+              {notificationMsg}
+            </span>
+          )}
         </div>
 
-        {/* Right Actions: Actualizar & Cambiar Carpeta */}
+        {/* Right Actions: Cambiar Carpeta, Cambiar WhatsApp, Actualizar, Cerrar Sesión */}
         <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
           {/* Cambiar Carpeta Compartida Button */}
           <button
@@ -58,12 +99,57 @@ export const GoogleAuthBanner: React.FC<GoogleAuthBannerProps> = ({
             <span>Cambiar Carpeta</span>
           </button>
 
+          {/* Botón / Campo para Cambiar Número de WhatsApp */}
+          {isEditingWhatsapp ? (
+            <div className="flex items-center gap-1.5 bg-slate-900/90 border border-emerald-500/50 rounded-xl px-2 py-1 shadow-inner">
+              <MessageCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <input
+                type="tel"
+                value={whatsappInput}
+                onChange={(e) => setWhatsappInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleActualizar();
+                  } else if (e.key === 'Escape') {
+                    setWhatsappInput(whatsappNumber);
+                    setIsEditingWhatsapp(false);
+                  }
+                }}
+                placeholder="Ej. 51952004149"
+                className="w-28 sm:w-36 bg-slate-950/90 text-emerald-300 text-xs px-2 py-0.5 rounded-lg border border-emerald-500/40 focus:outline-none focus:border-emerald-400 font-mono"
+                autoFocus
+                title="Escribe el nuevo número y haz clic en 'Actualizar' o presiona Enter"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setWhatsappInput(whatsappNumber);
+                  setIsEditingWhatsapp(false);
+                }}
+                className="text-slate-400 hover:text-white p-0.5 text-xs cursor-pointer"
+                title="Cancelar cambio de WhatsApp"
+              >
+                ✕
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsEditingWhatsapp(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-950/80 hover:bg-emerald-900/90 text-emerald-300 hover:text-white border border-emerald-500/40 text-xs font-semibold shadow-md shadow-emerald-950/40 transition-all active:scale-95 cursor-pointer"
+              title="Hacer clic para editar el número de WhatsApp receptor de pedidos"
+            >
+              <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Cambiar WhatsApp</span>
+            </button>
+          )}
+
           {/* Actualizar Button */}
           <button
-            onClick={onRefresh}
+            onClick={handleActualizar}
             disabled={isSyncing}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-slate-100 hover:text-white border border-white/15 text-xs font-semibold shadow-xs transition-all disabled:opacity-50 active:scale-95 cursor-pointer"
-            title="Recargar y sincronizar productos y subcarpetas"
+            title="Actualizar catálogo y guardar cambios"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-cyan-400' : 'text-cyan-400'}`} />
             <span>{isSyncing ? 'Actualizando...' : 'Actualizar'}</span>
@@ -91,6 +177,13 @@ export const GoogleAuthBanner: React.FC<GoogleAuthBannerProps> = ({
           )}
         </div>
       </div>
+
+      {notificationMsg && (
+        <div className="sm:hidden bg-emerald-950/90 text-emerald-200 text-xs px-4 py-1.5 text-center flex items-center justify-center gap-1.5 border-t border-emerald-800">
+          <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+          <span>{notificationMsg}</span>
+        </div>
+      )}
 
       {authError && (
         <div className="bg-rose-950/80 text-rose-200 text-xs px-4 py-1.5 text-center flex items-center justify-center gap-1.5 border-t border-rose-800 backdrop-blur-md">

@@ -5,13 +5,16 @@ import {
   HardDrive,
   ShieldCheck
 } from 'lucide-react';
+import { formatWhatsappDisplay } from '../utils/whatsapp';
 
 interface FooterProps {
   folderName: string;
   totalProducts: number;
+  whatsappNumber?: string;
 }
 
-export const Footer: React.FC<FooterProps> = ({ folderName, totalProducts }) => {
+export const Footer: React.FC<FooterProps> = ({ folderName, totalProducts, whatsappNumber }) => {
+  const displayPhone = formatWhatsappDisplay(whatsappNumber);
   return (
     <footer className="frosted-footer text-slate-400 mt-16 transition-colors relative z-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -75,7 +78,7 @@ export const Footer: React.FC<FooterProps> = ({ folderName, totalProducts }) => 
             </p>
             <div className="inline-flex items-center gap-2 text-white font-bold text-sm sm:text-base tracking-wide select-all">
               <Phone className="w-4 h-4 text-cyan-400 shrink-0" />
-              <span>+51 952 004 149</span>
+              <span>{displayPhone}</span>
             </div>
           </div>
         </div>

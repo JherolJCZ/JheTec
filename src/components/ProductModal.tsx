@@ -15,6 +15,7 @@ interface ProductModalProps {
   onClose: () => void;
   onAddToCart: (product: ProductItem) => void;
   isInCart: boolean;
+  whatsappNumber?: string;
 }
 
 export const ProductModal: React.FC<ProductModalProps> = ({
@@ -22,6 +23,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   onClose,
   onAddToCart,
   isInCart,
+  whatsappNumber,
 }) => {
   const [customNote, setCustomNote] = useState('');
   const [justAdded, setJustAdded] = useState(false);
@@ -29,7 +31,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   if (!product) return null;
 
   const handleWhatsapp = () => {
-    const link = getWhatsAppProductLink(product, customNote);
+    const link = getWhatsAppProductLink(product, customNote, whatsappNumber);
     window.open(link, '_blank');
   };
 

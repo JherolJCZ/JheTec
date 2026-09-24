@@ -1,7 +1,57 @@
 import { ProductItem, CartItem } from '../types/catalog';
 
-export const WHATSAPP_NUMBER = '51952004149';
-export const WHATSAPP_DISPLAY = '+51 952 004 149';
+export const DEFAULT_WHATSAPP_NUMBER = '51952004149';
+export const DEFAULT_WHATSAPP_DISPLAY = '+51 952 004 149';
+
+export const cleanWhatsappNumber = (input: string): string => {
+  if (!input) return '';
+  return input.replace(/[^\d]/g, '');
+};
+
+export const getStoredWhatsappNumber = (): string => {
+  try {
+    const saved = localStorage.getItem('catalog_whatsapp_number');
+    if (saved && saved.trim()) {
+      const clean = cleanWhatsappNumber(saved);
+      if (clean) return clean;
+    }
+  } catch {
+    // ignore
+  }
+  return DEFAULT_WHATSAPP_NUMBER;
+};
+
+export const setStoredWhatsappNumber = (num: string): string => {
+  const cleaned = cleanWhatsappNumber(num);
+  try {
+    if (cleaned) {
+      localStorage.setItem('catalog_whatsapp_number', cleaned);
+    } else {
+      localStorage.removeItem('catalog_whatsapp_number');
+    }
+  } catch {
+    // ignore
+  }
+  return cleaned || DEFAULT_WHATSAPP_NUMBER;
+};
+
+export const formatWhatsappDisplay = (number?: string): string => {
+  const clean = cleanWhatsappNumber(number || getStoredWhatsappNumber());
+  if (!clean) return DEFAULT_WHATSAPP_DISPLAY;
+  if (clean.length === 11 && clean.startsWith('51')) {
+    return `+51 ${clean.slice(2, 5)} ${clean.slice(5, 8)} ${clean.slice(8)}`;
+  }
+  if (clean.length === 9) {
+    return `+51 ${clean.slice(0, 3)} ${clean.slice(3, 6)} ${clean.slice(6)}`;
+  }
+  return `+${clean}`;
+};
+
+export const getWhatsAppNumber = getStoredWhatsappNumber;
+export const getWhatsAppDisplay = formatWhatsappDisplay;
+
+export const WHATSAPP_NUMBER = DEFAULT_WHATSAPP_NUMBER;
+export const WHATSAPP_DISPLAY = DEFAULT_WHATSAPP_DISPLAY;
 
 export const cleanProductName = (filename: string): string => {
   if (!filename) return 'Producto';
@@ -16,8 +66,10 @@ export const cleanProductName = (filename: string): string => {
 
 export const createSingleProductWhatsappUrl = (
   product: ProductItem,
-  customNotes?: string
+  customNotes?: string,
+  targetWhatsapp?: string
 ): string => {
+  const targetNumber = targetWhatsapp ? cleanWhatsappNumber(targetWhatsapp) : getStoredWhatsappNumber();
   const name = product.name
     ? product.name.replace(/\.[^/.]+$/, '')
     : (product.displayName || 'este producto');
@@ -32,20 +84,22 @@ export const createSingleProductWhatsappUrl = (
   }
 
   const encoded = encodeURIComponent(message);
-  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encoded}`;
+  return `https://wa.me/${targetNumber}?text=${encoded}`;
 };
 
 export const createCartWhatsappUrl = (
   items: CartItem[],
-  customerInfo?: { name?: string; address?: string; notes?: string }
+  customerInfo?: { name?: string; address?: string; notes?: string },
+  targetWhatsapp?: string
 ): string => {
+  const targetNumber = targetWhatsapp ? cleanWhatsappNumber(targetWhatsapp) : getStoredWhatsappNumber();
   const message = formatCartWhatsAppMessage(
     items,
     customerInfo?.name,
     customerInfo?.address,
     customerInfo?.notes
   );
-  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+  return `https://wa.me/${targetNumber}?text=${encodeURIComponent(message)}`;
 };
 
 export const formatCartWhatsAppMessage = (

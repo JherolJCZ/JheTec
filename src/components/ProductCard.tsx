@@ -14,6 +14,7 @@ interface ProductCardProps {
   onAddToCart: (product: ProductItem) => void;
   onOpenModal: (product: ProductItem) => void;
   isInCart: boolean;
+  whatsappNumber?: string;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({
@@ -21,6 +22,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onAddToCart,
   onOpenModal,
   isInCart,
+  whatsappNumber,
 }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [addedAnimation, setAddedAnimation] = useState(false);
@@ -34,7 +36,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
   const handleWhatsappClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const link = getWhatsAppProductLink(product);
+    const link = getWhatsAppProductLink(product, undefined, whatsappNumber);
     window.open(link, '_blank');
   };
 

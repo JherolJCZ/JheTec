@@ -8,6 +8,7 @@ interface CategorySectionProps {
   onAddToCart: (product: ProductItem) => void;
   onOpenModal: (product: ProductItem) => void;
   cartProductIds: Set<string>;
+  whatsappNumber?: string;
 }
 
 export const CategorySection: React.FC<CategorySectionProps> = ({
@@ -15,6 +16,7 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
   onAddToCart,
   onOpenModal,
   cartProductIds,
+  whatsappNumber,
 }) => {
   return (
     <section
@@ -58,6 +60,7 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
               onAddToCart={onAddToCart}
               onOpenModal={onOpenModal}
               isInCart={cartProductIds.has(product.id)}
+              whatsappNumber={whatsappNumber}
             />
           ))}
         </div>

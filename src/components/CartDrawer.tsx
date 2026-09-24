@@ -11,8 +11,8 @@ import {
 } from 'lucide-react';
 import {
   formatCartWhatsAppMessage,
-  WHATSAPP_NUMBER,
-  WHATSAPP_DISPLAY,
+  formatWhatsappDisplay,
+  getStoredWhatsappNumber,
 } from '../utils/whatsapp';
 
 interface CartDrawerProps {
@@ -22,6 +22,7 @@ interface CartDrawerProps {
   onUpdateQuantity: (productId: string, quantity: number) => void;
   onRemoveItem: (productId: string) => void;
   onClearCart: () => void;
+  whatsappNumber?: string;
 }
 
 export const CartDrawer: React.FC<CartDrawerProps> = ({
@@ -31,6 +32,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   onUpdateQuantity,
   onRemoveItem,
   onClearCart,
+  whatsappNumber,
 }) => {
   const [customerName, setCustomerName] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
@@ -39,6 +41,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   if (!isOpen) return null;
 
   const totalItemsCount = items.reduce((sum, item) => sum + item.quantity, 0);
+
+  const activeWhatsappNumber = whatsappNumber || getStoredWhatsappNumber();
+  const displayWhatsapp = formatWhatsappDisplay(activeWhatsappNumber);
 
   const handleSendWhatsAppOrder = () => {
     if (items.length === 0) return;
@@ -50,7 +55,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
       generalNotes
     );
 
-    const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+    const whatsappUrl = `https://wa.me/${activeWhatsappNumber}?text=${encodeURIComponent(
       message
     )}`;
     window.open(whatsappUrl, '_blank');
@@ -261,7 +266,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               </button>
 
               <p className="text-[11px] text-slate-400 text-center font-medium">
-                Se abrirá tu WhatsApp con la lista formateada para {WHATSAPP_DISPLAY}
+                Se abrirá tu WhatsApp con la lista formateada para {displayWhatsapp}
               </p>
             </div>
           )}

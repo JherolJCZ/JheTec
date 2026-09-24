@@ -10,9 +10,11 @@ import {
   Sparkles,
   UserCheck,
   User,
-  LogOut
+  LogOut,
+  MessageCircle
 } from 'lucide-react';
 import { DEFAULT_FOLDER_ID } from '../services/driveService';
+import { DEFAULT_WHATSAPP_NUMBER, cleanWhatsappNumber } from '../utils/whatsapp';
 
 interface FolderSettingsModalProps {
   isOpen: boolean;
@@ -25,6 +27,8 @@ interface FolderSettingsModalProps {
   isAdmin: boolean;
   onOpenAdminLogin: () => void;
   onLogoutAdmin: () => void;
+  whatsappNumber?: string;
+  onSaveWhatsapp?: (newNumber: string) => void;
 }
 
 export const FolderSettingsModal: React.FC<FolderSettingsModalProps> = ({
@@ -38,14 +42,18 @@ export const FolderSettingsModal: React.FC<FolderSettingsModalProps> = ({
   isAdmin,
   onOpenAdminLogin,
   onLogoutAdmin,
+  whatsappNumber = DEFAULT_WHATSAPP_NUMBER,
+  onSaveWhatsapp,
 }) => {
   const [folderInput, setFolderInput] = useState(currentFolderId);
+  const [whatsappVal, setWhatsappVal] = useState(whatsappNumber);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [pasteError, setPasteError] = useState<string | null>(null);
 
   useEffect(() => {
     setFolderInput(currentFolderId);
-  }, [currentFolderId, isOpen]);
+    setWhatsappVal(whatsappNumber);
+  }, [currentFolderId, whatsappNumber, isOpen]);
 
   if (!isOpen) return null;
 
@@ -90,6 +98,14 @@ export const FolderSettingsModal: React.FC<FolderSettingsModalProps> = ({
     if (!cleanId) return;
 
     onSave(cleanId);
+
+    if (isAdmin && onSaveWhatsapp) {
+      const cleanWp = cleanWhatsappNumber(whatsappVal);
+      if (cleanWp) {
+        onSaveWhatsapp(cleanWp);
+      }
+    }
+
     setSavedSuccess(true);
     setTimeout(() => {
       setSavedSuccess(false);
@@ -100,6 +116,10 @@ export const FolderSettingsModal: React.FC<FolderSettingsModalProps> = ({
   const handleResetDefault = () => {
     setFolderInput(DEFAULT_FOLDER_ID);
     onSave(DEFAULT_FOLDER_ID);
+    if (isAdmin && onSaveWhatsapp) {
+      onSaveWhatsapp(DEFAULT_WHATSAPP_NUMBER);
+      setWhatsappVal(DEFAULT_WHATSAPP_NUMBER);
+    }
     setSavedSuccess(true);
     setTimeout(() => {
       setSavedSuccess(false);
@@ -222,6 +242,30 @@ export const FolderSettingsModal: React.FC<FolderSettingsModalProps> = ({
               Puedes pegar el enlace completo de Google Drive o el ID directo de cualquier cuenta.
             </p>
           </div>
+
+          {/* Admin WhatsApp Configuration */}
+          {isAdmin && (
+            <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-emerald-500/30 space-y-1.5">
+              <label className="block text-xs font-bold text-emerald-300 uppercase tracking-wide">
+                Número de WhatsApp para Pedidos y Consultas:
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                  <MessageCircle className="w-4 h-4 text-emerald-400" />
+                </div>
+                <input
+                  type="tel"
+                  value={whatsappVal}
+                  onChange={(e) => setWhatsappVal(e.target.value)}
+                  placeholder="Ej: 51952004149"
+                  className="w-full text-xs font-mono pl-10 pr-4 py-2.5 bg-slate-950/80 text-emerald-300 rounded-xl border border-emerald-500/30 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-all shadow-inner"
+                />
+              </div>
+              <p className="text-[10px] text-slate-400">
+                Ingresa el número con código de país (ej. 51952004149). Todos los botones de compra se actualizarán.
+              </p>
+            </div>
+          )}
 
           {/* Sync Stats Info */}
           <div className="p-4 rounded-2xl bg-slate-900/70 border border-white/10 space-y-2 text-xs">
