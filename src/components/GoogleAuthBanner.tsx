@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User } from 'firebase/auth';
 import { RefreshCw, FolderPlus, LogOut, AlertCircle, ShieldCheck, MessageCircle, CheckCircle } from 'lucide-react';
-import { logoutGoogle } from '../services/firebase';
+import { logoutGoogle, googleSignIn } from '../services/firebase';
 import { formatWhatsappDisplay } from '../utils/whatsapp';
 
 interface GoogleAuthBannerProps {
@@ -26,7 +26,7 @@ export const GoogleAuthBanner: React.FC<GoogleAuthBannerProps> = ({
   whatsappNumber,
   onSaveWhatsapp,
 }) => {
-  const [authError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
   const [isEditingWhatsapp, setIsEditingWhatsapp] = useState(false);
   const [whatsappInput, setWhatsappInput] = useState(whatsappNumber);
   const [notificationMsg, setNotificationMsg] = useState<string | null>(null);
@@ -34,6 +34,22 @@ export const GoogleAuthBanner: React.FC<GoogleAuthBannerProps> = ({
   useEffect(() => {
     setWhatsappInput(whatsappNumber);
   }, [whatsappNumber]);
+
+  const handleGoogleConnect = async () => {
+    try {
+      setAuthError(null);
+      const res = await googleSignIn();
+      if (res?.accessToken) {
+        setNotificationMsg('¡Google Drive conectado con éxito!');
+        setTimeout(() => setNotificationMsg(null), 3500);
+        onRefresh();
+      }
+    } catch (err: any) {
+      console.error('Google Sign-in error:', err);
+      setAuthError('No se pudo vincular la cuenta de Google');
+      setTimeout(() => setAuthError(null), 4000);
+    }
+  };
 
   const handleSignOut = async () => {
     try {
@@ -144,6 +160,29 @@ export const GoogleAuthBanner: React.FC<GoogleAuthBannerProps> = ({
             </button>
           )}
 
+          {/* Conectar Google Drive (para sincronización directa en vivo) */}
+          {!user ? (
+            <button
+              onClick={handleGoogleConnect}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-950/80 hover:bg-blue-900/90 text-blue-300 hover:text-white border border-blue-500/40 text-xs font-semibold shadow-md shadow-blue-950/40 transition-all active:scale-95 cursor-pointer"
+              title="Vincular con tu cuenta de Google para sincronización directa en vivo"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"/>
+              </svg>
+              <span>Vincular Google</span>
+            </button>
+          ) : (
+            <button
+              onClick={handleSignOut}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-blue-950/60 text-blue-300 border border-blue-500/30 text-xs font-medium hover:bg-rose-950/60 hover:text-rose-300 transition-colors shadow-xs cursor-pointer"
+              title="Cuenta de Google vinculada (clic para desvincular)"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Drive Vinculado</span>
+            </button>
+          )}
+
           {/* Actualizar Button */}
           <button
             onClick={handleActualizar}
@@ -164,17 +203,6 @@ export const GoogleAuthBanner: React.FC<GoogleAuthBannerProps> = ({
             <LogOut className="w-3.5 h-3.5" />
             <span>Cerrar Sesión</span>
           </button>
-
-          {user && (
-            <button
-              onClick={handleSignOut}
-              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-800 text-slate-300 border border-white/10 text-[11px] font-medium transition-colors shadow-xs"
-              title="Cerrar sesión de Google"
-            >
-              <LogOut className="w-3 h-3" />
-              <span>Google</span>
-            </button>
-          )}
         </div>
       </div>
 
