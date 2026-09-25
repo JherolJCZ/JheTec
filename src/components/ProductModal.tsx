@@ -140,13 +140,15 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
           {/* Action CTAs */}
           <div className="space-y-3 pt-4 border-t border-white/10">
-            <button
-              onClick={handleWhatsapp}
-              className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/60 active:scale-98 transition-all border border-emerald-400/30"
+            <a
+              href={getWhatsAppProductLink(product, customNote, whatsappNumber)}
+              target="_blank"
+              rel="noreferrer"
+              className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/60 active:scale-98 transition-all border border-emerald-400/30 no-underline cursor-pointer"
             >
               <MessageCircle className="w-5 h-5 fill-white" />
               <span>Pedir por WhatsApp</span>
-            </button>
+            </a>
 
             <button
               onClick={handleAdd}

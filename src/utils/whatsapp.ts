@@ -69,15 +69,17 @@ export const createSingleProductWhatsappUrl = (
   customNotes?: string,
   targetWhatsapp?: string
 ): string => {
-  const targetNumber = targetWhatsapp ? cleanWhatsappNumber(targetWhatsapp) : getStoredWhatsappNumber();
+  const cleanTarget = targetWhatsapp ? cleanWhatsappNumber(targetWhatsapp) : '';
+  const targetNumber = cleanTarget || getStoredWhatsappNumber() || DEFAULT_WHATSAPP_NUMBER;
   const name = product.name
     ? product.name.replace(/\.[^/.]+$/, '')
     : (product.displayName || 'este producto');
   const link =
     product.webViewLink ||
     (product.id ? `https://drive.google.com/file/d/${product.id}/view` : '');
+  const linkText = link ? `: ${link}` : '';
 
-  let message = `¡Hola! Estoy interesado(a) en comprar este producto *${name}*: ${link}\n¿Tienen disponibilidad para envío o entrega? ¡Muchas gracias!`;
+  let message = `¡Hola! Estoy interesado(a) en comprar este producto *${name}*${linkText}\n¿Tienen disponibilidad para envío o entrega? ¡Muchas gracias!`;
 
   if (customNotes && customNotes.trim()) {
     message += `\n\nNota: ${customNotes.trim()}`;
@@ -92,7 +94,8 @@ export const createCartWhatsappUrl = (
   customerInfo?: { name?: string; address?: string; notes?: string },
   targetWhatsapp?: string
 ): string => {
-  const targetNumber = targetWhatsapp ? cleanWhatsappNumber(targetWhatsapp) : getStoredWhatsappNumber();
+  const cleanTarget = targetWhatsapp ? cleanWhatsappNumber(targetWhatsapp) : '';
+  const targetNumber = cleanTarget || getStoredWhatsappNumber() || DEFAULT_WHATSAPP_NUMBER;
   const message = formatCartWhatsAppMessage(
     items,
     customerInfo?.name,

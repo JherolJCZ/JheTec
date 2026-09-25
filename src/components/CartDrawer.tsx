@@ -45,21 +45,14 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   const activeWhatsappNumber = whatsappNumber || getStoredWhatsappNumber();
   const displayWhatsapp = formatWhatsappDisplay(activeWhatsappNumber);
 
-  const handleSendWhatsAppOrder = () => {
-    if (items.length === 0) return;
-
-    const message = formatCartWhatsAppMessage(
+  const cartWhatsappUrl = `https://wa.me/${activeWhatsappNumber}?text=${encodeURIComponent(
+    formatCartWhatsAppMessage(
       items,
       customerName,
       deliveryAddress,
       generalNotes
-    );
-
-    const whatsappUrl = `https://wa.me/${activeWhatsappNumber}?text=${encodeURIComponent(
-      message
-    )}`;
-    window.open(whatsappUrl, '_blank');
-  };
+    )
+  )}`;
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
@@ -256,14 +249,16 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 </span>
               </div>
 
-              <button
-                onClick={handleSendWhatsAppOrder}
-                className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/70 active:scale-98 transition-all border border-emerald-400/30"
+              <a
+                href={cartWhatsappUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/70 active:scale-98 transition-all border border-emerald-400/30 text-center no-underline cursor-pointer"
               >
                 <MessageCircle className="w-5 h-5 fill-white" />
                 <span>Enviar Pedido a WhatsApp</span>
                 <Send className="w-4 h-4 ml-1" />
-              </button>
+              </a>
 
               <p className="text-[11px] text-slate-400 text-center font-medium">
                 Se abrirá tu WhatsApp con la lista formateada para {displayWhatsapp}

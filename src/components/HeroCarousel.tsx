@@ -49,16 +49,17 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({
 
   const currentSlide = slides[currentIndex];
 
-  const handleWhatsappFeatured = (slide: CarouselSlide) => {
+  const getSlideWhatsappUrl = (slide: CarouselSlide) => {
     const name = slide.name
       ? slide.name.replace(/\.[^/.]+$/, '')
       : (slide.title || 'este producto');
     const link =
       slide.webViewLink ||
       (slide.id ? `https://drive.google.com/file/d/${slide.id}/view` : '');
-    const message = `¡Hola! Estoy interesado(a) en comprar este producto *${name}*: ${link}\n¿Tienen disponibilidad para envío o entrega? ¡Muchas gracias!`;
+    const linkText = link ? `: ${link}` : '';
+    const message = `¡Hola! Estoy interesado(a) en comprar este producto *${name}*${linkText}\n¿Tienen disponibilidad para envío o entrega? ¡Muchas gracias!`;
     const text = encodeURIComponent(message);
-    window.open(`https://wa.me/${activeWhatsappNumber}?text=${text}`, '_blank');
+    return `https://wa.me/${activeWhatsappNumber}?text=${text}`;
   };
 
   return (
@@ -118,13 +119,15 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({
 
                   {/* Action Buttons */}
                   <div className="flex flex-wrap items-center gap-3 pt-1">
-                    <button
-                      onClick={() => handleWhatsappFeatured(slide)}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white font-bold text-xs sm:text-sm shadow-xl shadow-emerald-950/70 active:scale-95 transition-all border border-emerald-400/30"
+                    <a
+                      href={getSlideWhatsappUrl(slide)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white font-bold text-xs sm:text-sm shadow-xl shadow-emerald-950/70 active:scale-95 transition-all border border-emerald-400/30 no-underline cursor-pointer"
                     >
                       <MessageCircle className="w-4 h-4 fill-white" />
                       <span>Pedir por WhatsApp</span>
-                    </button>
+                    </a>
 
                     <button
                       onClick={() => onOpenImage(slide)}

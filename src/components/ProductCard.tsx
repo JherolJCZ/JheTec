@@ -34,11 +34,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     setTimeout(() => setAddedAnimation(false), 900);
   };
 
-  const handleWhatsappClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const link = getWhatsAppProductLink(product, undefined, whatsappNumber);
-    window.open(link, '_blank');
-  };
+  const whatsappUrl = getWhatsAppProductLink(product, undefined, whatsappNumber);
 
   return (
     <div
@@ -108,16 +104,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
         {/* Action Buttons: WhatsApp & Cart */}
         <div className="pt-3 border-t border-white/10 flex items-center gap-2">
-          {/* Quick WhatsApp Inquiry Button */}
-          <button
-            type="button"
-            onClick={handleWhatsappClick}
-            className="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-md shadow-emerald-950/50 hover:shadow-emerald-900/60 active:scale-95 border border-emerald-400/30"
-            title="Consultar disponibilidad por WhatsApp"
+          {/* Quick WhatsApp Inquiry Link */}
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-md shadow-emerald-950/50 hover:shadow-emerald-900/60 active:scale-95 border border-emerald-400/30 no-underline cursor-pointer"
+            title="Pedir o consultar disponibilidad por WhatsApp"
           >
             <MessageCircle className="w-3.5 h-3.5 fill-white" />
             <span>Pedir</span>
-          </button>
+          </a>
 
           {/* Add To Cart / Pedido Button */}
           <button
