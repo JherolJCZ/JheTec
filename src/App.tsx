@@ -27,7 +27,8 @@ import {
   MessageCircle,
   FolderOpen,
   ArrowUp,
-  Sparkles
+  Sparkles,
+  CheckCircle
 } from 'lucide-react';
 import { getStoredWhatsappNumber, setStoredWhatsappNumber } from './utils/whatsapp';
 
@@ -57,6 +58,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [syncToast, setSyncToast] = useState<string | null>(null);
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -108,15 +110,21 @@ export default function App() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Fetch catalog contents
+  // Fetch catalog contents with cache busting
   const loadCatalogData = useCallback(
-    async (targetFolderId: string, currentToken?: string | null) => {
+    async (targetFolderId: string, currentToken?: string | null, forceRefresh: boolean = false) => {
       setIsSyncing(true);
       setError(null);
       try {
         const effectiveToken = currentToken !== undefined ? currentToken : getAccessToken();
-        const data = await fetchDriveFolderContents(targetFolderId, effectiveToken);
+        const data = await fetchDriveFolderContents(targetFolderId, effectiveToken, forceRefresh);
         setCatalog(data);
+        if (forceRefresh) {
+          const catCount = data.categories?.length || 0;
+          const prodCount = data.totalProducts || 0;
+          setSyncToast(`¡Catálogo actualizado en vivo! (${prodCount} productos en ${catCount} colecciones)`);
+          setTimeout(() => setSyncToast(null), 4500);
+        }
       } catch (err: any) {
         console.error('Error cargando catálogo:', err);
         setError(err.message || 'Error al conectar con Google Drive');
@@ -150,7 +158,7 @@ export default function App() {
   const handleSaveFolderId = (newId: string) => {
     setFolderId(newId);
     localStorage.setItem('drive_catalog_folder_id', newId);
-    loadCatalogData(newId, token);
+    loadCatalogData(newId, token, true);
   };
 
   // Cart operations
@@ -272,7 +280,7 @@ export default function App() {
       <GoogleAuthBanner
         user={user}
         hasToken={!!token}
-        onRefresh={() => loadCatalogData(folderId, token)}
+        onRefresh={() => loadCatalogData(folderId, token, true)}
         isSyncing={isSyncing}
         onOpenSettings={() => setIsSettingsOpen(true)}
         isAdmin={isAdmin}
@@ -289,7 +297,17 @@ export default function App() {
         onOpenCart={() => setIsCartOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         folderName={catalog?.folderName || 'CATÁLOGO VIRTUAL'}
+        onRefreshCatalog={() => loadCatalogData(folderId, token, true)}
+        isSyncing={isSyncing}
       />
+
+      {/* Floating Sync Feedback Toast */}
+      {syncToast && (
+        <div className="fixed top-20 right-4 sm:right-8 z-50 animate-fade-in bg-slate-900/95 text-emerald-300 border border-emerald-500/50 px-4 py-2.5 rounded-2xl shadow-2xl backdrop-blur-md flex items-center gap-2 text-xs font-semibold">
+          <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{syncToast}</span>
+        </div>
+      )}
 
       {/* Main Content Area */}
       <main className="flex-1 pb-16">

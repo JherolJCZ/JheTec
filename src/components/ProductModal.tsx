@@ -69,8 +69,13 @@ export const ProductModal: React.FC<ProductModalProps> = ({
             onError={(e) => {
               const target = e.target as HTMLImageElement;
               const fallbackDrive = `https://drive.google.com/thumbnail?id=${product.id}&sz=w1600`;
-              if (target.src !== fallbackDrive) {
+              const ucDrive = `https://drive.google.com/uc?export=view&id=${product.id}`;
+              if (!target.dataset.triedFallback) {
+                target.dataset.triedFallback = '1';
                 target.src = fallbackDrive;
+              } else if (!target.dataset.triedUc) {
+                target.dataset.triedUc = '1';
+                target.src = ucDrive;
               }
             }}
           />
