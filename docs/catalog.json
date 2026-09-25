@@ -55,8 +55,32 @@
       "id": "1AfBrYHJMcQNSQ9fwBMsO91nhER3ICQgy",
       "name": "GERANIOS",
       "displayName": "GERANIOS",
-      "description": "3 producto(s) en esta categoría",
+      "description": "4 producto(s) en esta categoría",
       "items": [
+        {
+          "id": "1KP-n6bVaXs-WvV2J5p7naD-co40T9i0I",
+          "name": "eeNaranja Geranio.jpg",
+          "displayName": "eeNaranja Geranio",
+          "imageUrl": "https://lh3.googleusercontent.com/d/1KP-n6bVaXs-WvV2J5p7naD-co40T9i0I=s800",
+          "highResUrl": "https://lh3.googleusercontent.com/d/1KP-n6bVaXs-WvV2J5p7naD-co40T9i0I=s1600",
+          "webViewLink": "https://drive.google.com/file/d/1KP-n6bVaXs-WvV2J5p7naD-co40T9i0I/view",
+          "categoryId": "1AfBrYHJMcQNSQ9fwBMsO91nhER3ICQgy",
+          "categoryName": "GERANIOS",
+          "code": "GER-001",
+          "description": "Producto catalogado en la colección GERANIOS."
+        },
+        {
+          "id": "1IPQpavV1ncPP94U0h_g5NAUmVeXs9oBP",
+          "name": "Geranio rosado.jpg",
+          "displayName": "Geranio rosado",
+          "imageUrl": "https://lh3.googleusercontent.com/d/1IPQpavV1ncPP94U0h_g5NAUmVeXs9oBP=s800",
+          "highResUrl": "https://lh3.googleusercontent.com/d/1IPQpavV1ncPP94U0h_g5NAUmVeXs9oBP=s1600",
+          "webViewLink": "https://drive.google.com/file/d/1IPQpavV1ncPP94U0h_g5NAUmVeXs9oBP/view",
+          "categoryId": "1AfBrYHJMcQNSQ9fwBMsO91nhER3ICQgy",
+          "categoryName": "GERANIOS",
+          "code": "GER-002",
+          "description": "Producto catalogado en la colección GERANIOS."
+        },
         {
           "id": "1bNnW_OWV-yg8xCv3RI2RUOaE_C8a2CLz",
           "name": "Geranio.jpg",
@@ -66,7 +90,7 @@
           "webViewLink": "https://drive.google.com/file/d/1bNnW_OWV-yg8xCv3RI2RUOaE_C8a2CLz/view",
           "categoryId": "1AfBrYHJMcQNSQ9fwBMsO91nhER3ICQgy",
           "categoryName": "GERANIOS",
-          "code": "GER-001",
+          "code": "GER-003",
           "description": "Producto catalogado en la colección GERANIOS."
         },
         {
@@ -78,19 +102,7 @@
           "webViewLink": "https://drive.google.com/file/d/1F38hhgpDkF0ZF_CSUiUY8P61Pl6Fd8x4/view",
           "categoryId": "1AfBrYHJMcQNSQ9fwBMsO91nhER3ICQgy",
           "categoryName": "GERANIOS",
-          "code": "GER-002",
-          "description": "Producto catalogado en la colección GERANIOS."
-        },
-        {
-          "id": "1KP-n6bVaXs-WvV2J5p7naD-co40T9i0I",
-          "name": "Naranja Geranio.jpg",
-          "displayName": "Naranja Geranio",
-          "imageUrl": "https://lh3.googleusercontent.com/d/1KP-n6bVaXs-WvV2J5p7naD-co40T9i0I=s800",
-          "highResUrl": "https://lh3.googleusercontent.com/d/1KP-n6bVaXs-WvV2J5p7naD-co40T9i0I=s1600",
-          "webViewLink": "https://drive.google.com/file/d/1KP-n6bVaXs-WvV2J5p7naD-co40T9i0I/view",
-          "categoryId": "1AfBrYHJMcQNSQ9fwBMsO91nhER3ICQgy",
-          "categoryName": "GERANIOS",
-          "code": "GER-003",
+          "code": "GER-004",
           "description": "Producto catalogado en la colección GERANIOS."
         }
       ]
@@ -136,6 +148,6 @@
       ]
     }
   ],
-  "totalProducts": 9,
-  "lastSynced": "2026-09-25T17:23:44.966Z"
+  "totalProducts": 10,
+  "lastSynced": "2026-09-25T17:57:23.309Z"
 }

@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { User } from 'firebase/auth';
 import {
   DriveCatalogData,
   ProductItem,
   CartItem,
   CarouselSlide,
 } from './types/catalog';
-import { initAuth, getAccessToken } from './services/firebase';
 import {
   fetchDriveFolderContents,
   DEFAULT_FOLDER_ID
@@ -33,10 +31,6 @@ import {
 import { getStoredWhatsappNumber, setStoredWhatsappNumber } from './utils/whatsapp';
 
 export default function App() {
-  // Authentication & Drive token state
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-
   // WhatsApp configuration state
   const [whatsappNumber, setWhatsappNumber] = useState<string>(() => {
     return getStoredWhatsappNumber();
@@ -48,23 +42,46 @@ export default function App() {
     setWhatsappNumber(cleaned);
   };
 
-  // Drive Folder configuration
+  // Admin Mode state
+  const [isAdmin, setIsAdmin] = useState<boolean>(() => {
+    return localStorage.getItem('drive_catalog_is_admin') === 'true';
+  });
+  const [isAdminLoginOpen, setIsAdminLoginOpen] = useState<boolean>(false);
+
+  const handleLoginAdminSuccess = () => {
+    setIsAdmin(true);
+    localStorage.setItem('drive_catalog_is_admin', 'true');
+    setIsAdminLoginOpen(false);
+  };
+
+  const handleLogoutAdmin = () => {
+    setIsAdmin(false);
+    localStorage.removeItem('drive_catalog_is_admin');
+  };
+
+  // Current Google Drive Folder ID
   const [folderId, setFolderId] = useState<string>(() => {
     return localStorage.getItem('drive_catalog_folder_id') || DEFAULT_FOLDER_ID;
   });
 
-  // Catalog data state
+  // App UI & Data state
   const [catalog, setCatalog] = useState<DriveCatalogData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
   const [syncToast, setSyncToast] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Search & Filter state
+  // Filter & Search state
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
 
-  // Shopping Cart state
+  // Modals & Drawers state
+  const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(null);
+  const [showScrollTop, setShowScrollTop] = useState<boolean>(false);
+
+  // Shopping cart items state (persisted to localStorage)
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
     try {
       const saved = localStorage.getItem('drive_catalog_cart');
@@ -73,30 +90,8 @@ export default function App() {
       return [];
     }
   });
-  const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
 
-  // Modal / Lightbox state
-  const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(null);
-  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
-  const [isAdminLoginOpen, setIsAdminLoginOpen] = useState<boolean>(false);
-  const [isAdmin, setIsAdmin] = useState<boolean>(() => {
-    return localStorage.getItem('catalog_is_admin') === 'true';
-  });
-
-  const handleLoginAdminSuccess = () => {
-    setIsAdmin(true);
-    localStorage.setItem('catalog_is_admin', 'true');
-  };
-
-  const handleLogoutAdmin = () => {
-    setIsAdmin(false);
-    localStorage.removeItem('catalog_is_admin');
-  };
-
-  // Scroll to top button visibility
-  const [showScrollTop, setShowScrollTop] = useState<boolean>(false);
-
-  // Persist cart
+  // Save cart to localStorage
   useEffect(() => {
     localStorage.setItem('drive_catalog_cart', JSON.stringify(cartItems));
   }, [cartItems]);
@@ -112,17 +107,16 @@ export default function App() {
 
   // Fetch catalog contents with cache busting
   const loadCatalogData = useCallback(
-    async (targetFolderId: string, currentToken?: string | null, forceRefresh: boolean = false) => {
+    async (targetFolderId: string, forceRefresh: boolean = false) => {
       setIsSyncing(true);
       setError(null);
       try {
-        const effectiveToken = currentToken !== undefined ? currentToken : getAccessToken();
-        const data = await fetchDriveFolderContents(targetFolderId, effectiveToken, forceRefresh);
+        const data = await fetchDriveFolderContents(targetFolderId, forceRefresh);
         setCatalog(data);
         if (forceRefresh) {
           const catCount = data.categories?.length || 0;
           const prodCount = data.totalProducts || 0;
-          setSyncToast(`¡Catálogo actualizado en vivo! (${prodCount} productos en ${catCount} colecciones)`);
+          setSyncToast(`¡Catálogo sincronizado! (${prodCount} productos en ${catCount} colecciones)`);
           setTimeout(() => setSyncToast(null), 4500);
         }
       } catch (err: any) {
@@ -136,29 +130,16 @@ export default function App() {
     []
   );
 
-  // Initialize Auth listener and load catalog
+  // Initialize and load catalog on start
   useEffect(() => {
-    const unsubscribe = initAuth(
-      (authUser, authToken) => {
-        setUser(authUser);
-        setToken(authToken);
-        loadCatalogData(folderId, authToken);
-      },
-      () => {
-        setUser(null);
-        setToken(null);
-        loadCatalogData(folderId, null);
-      }
-    );
-
-    return () => unsubscribe();
+    loadCatalogData(folderId, false);
   }, [folderId, loadCatalogData]);
 
   // Handle folder ID change
   const handleSaveFolderId = (newId: string) => {
     setFolderId(newId);
     localStorage.setItem('drive_catalog_folder_id', newId);
-    loadCatalogData(newId, token, true);
+    loadCatalogData(newId, true);
   };
 
   // Cart operations
@@ -196,91 +177,74 @@ export default function App() {
     setCartItems([]);
   };
 
+  // Calculate total items in cart
+  const totalCartCount = useMemo(() => {
+    return cartItems.reduce((acc, item) => acc + item.quantity, 0);
+  }, [cartItems]);
+
+  // Set of product IDs currently in cart for quick lookup
   const cartProductIds = useMemo(() => {
     return new Set(cartItems.map((item) => item.product.id));
   }, [cartItems]);
 
-  const totalCartCount = useMemo(() => {
-    return cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  }, [cartItems]);
-
-  // Filter categories and products based on search query and active category filter
+  // Filtered categories and products based on search and category tab
   const filteredCategories = useMemo(() => {
     if (!catalog) return [];
-    const query = searchQuery.trim().toLowerCase();
 
-    return catalog.categories
-      .filter((cat) => {
-        if (activeCategoryId && cat.id !== activeCategoryId) {
-          return false;
-        }
-        return true;
-      })
-      .map((cat) => {
-        if (!query) return cat;
+    let result = catalog.categories;
 
-        const filteredItems = cat.items.filter((item) => {
-          const matchName = item.displayName.toLowerCase().includes(query);
-          const matchCode = item.code?.toLowerCase().includes(query);
-          const matchCat = item.categoryName.toLowerCase().includes(query);
-          const matchDesc = item.description?.toLowerCase().includes(query);
-          return matchName || matchCode || matchCat || matchDesc;
-        });
+    // Filter by category tab
+    if (selectedCategory !== 'all') {
+      result = result.filter((cat) => cat.id === selectedCategory);
+    }
 
-        return {
-          ...cat,
-          items: filteredItems,
-        };
-      })
-      .filter((cat) => {
-        if (!query) return true;
-        return cat.items.length > 0 || cat.name.toLowerCase().includes(query);
-      });
-  }, [catalog, searchQuery, activeCategoryId]);
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      result = result
+        .map((cat) => {
+          const matchingItems = cat.items.filter(
+            (item) =>
+              item.displayName.toLowerCase().includes(q) ||
+              item.code.toLowerCase().includes(q) ||
+              item.categoryName.toLowerCase().includes(q)
+          );
+          return {
+            ...cat,
+            items: matchingItems,
+          };
+        })
+        .filter((cat) => cat.items.length > 0);
+    }
 
-  const totalFilteredProducts = useMemo(() => {
-    return filteredCategories.reduce((sum, cat) => sum + cat.items.length, 0);
+    return result;
+  }, [catalog, selectedCategory, searchQuery]);
+
+  // Total matching products count
+  const matchingProductsCount = useMemo(() => {
+    return filteredCategories.reduce((acc, cat) => acc + cat.items.length, 0);
   }, [filteredCategories]);
 
-  // Handle slide click to open modal
-  const handleOpenSlideModal = (slide: CarouselSlide) => {
-    setSelectedProduct({
-      id: slide.id,
-      name: slide.name,
-      displayName: slide.title,
-      imageUrl: slide.imageUrl,
-      highResUrl: slide.highResUrl,
-      webViewLink: slide.webViewLink,
-      categoryId: 'root-carousel',
-      categoryName: 'Destacados',
-      description: slide.subtitle,
-    });
-  };
-
-  const handleScrollToCategories = () => {
-    const el = document.getElementById('catalog-sections-start');
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
+  // Extract all products for category nav count badge
+  const allCategoryItemCount = useMemo(() => {
+    if (!catalog) return 0;
+    return catalog.categories.reduce((acc, cat) => acc + cat.items.length, 0);
+  }, [catalog]);
 
   return (
-    <div className="min-h-screen flex flex-col relative text-slate-100 bg-[#060813]">
-      {/* Dynamic Luminous Dark Canvas: Morphing aurora blobs + fine cyber overlays */}
-      <div className="fluid-canvas-container">
-        <div className="liquid-blob-1" />
-        <div className="liquid-blob-2" />
-        <div className="liquid-blob-3" />
-        <div className="liquid-blob-accent" />
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-white relative">
+      {/* Dynamic Deep Dark Tech Background */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute -top-40 -left-40 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-1/3 -right-40 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-40 left-1/3 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
         <div className="tech-dots-overlay" />
         <div className="tech-lines-overlay" />
       </div>
 
-      {/* Top Contact & Sync Bar (Only visible after Admin login) */}
+      {/* Top Admin Bar (Only visible after Admin login) */}
       <GoogleAuthBanner
-        user={user}
-        hasToken={!!token}
-        onRefresh={() => loadCatalogData(folderId, token, true)}
+        onRefresh={() => loadCatalogData(folderId, true)}
         isSyncing={isSyncing}
         onOpenSettings={() => setIsSettingsOpen(true)}
         isAdmin={isAdmin}
@@ -297,7 +261,7 @@ export default function App() {
         onOpenCart={() => setIsCartOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         folderName={catalog?.folderName || 'CATÁLOGO VIRTUAL'}
-        onRefreshCatalog={() => loadCatalogData(folderId, token, true)}
+        onRefreshCatalog={() => loadCatalogData(folderId, true)}
         isSyncing={isSyncing}
       />
 
@@ -309,106 +273,149 @@ export default function App() {
         </div>
       )}
 
-      {/* Main Content Area */}
-      <main className="flex-1 pb-16">
-        {/* Loading State Skeleton */}
-        {isLoading ? (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
-            <div className="aspect-[21/9] frosted-card animate-pulse rounded-3xl" />
-            <div className="h-10 frosted-card animate-pulse rounded-2xl w-1/3" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                <div key={i} className="aspect-square frosted-card animate-pulse rounded-3xl" />
-              ))}
+      {/* Main Body Content */}
+      <main className="flex-1 relative z-10">
+        {/* Loading State */}
+        {isLoading && (
+          <div className="py-32 flex flex-col items-center justify-center gap-4 text-center px-4">
+            <div className="relative">
+              <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center animate-pulse">
+                <FolderSync className="w-8 h-8 text-cyan-400 animate-spin" />
+              </div>
+              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-500 opacity-20 blur-sm animate-pulse" />
+            </div>
+            <div className="space-y-1">
+              <h2 className="text-lg font-bold text-white tracking-wide">
+                Sincronizando con Google Drive
+              </h2>
+              <p className="text-xs text-slate-400 max-w-sm">
+                Cargando colecciones de fotos y organizando el catálogo digital...
+              </p>
             </div>
           </div>
-        ) : (
+        )}
+
+        {/* Error State */}
+        {!isLoading && error && !catalog && (
+          <div className="max-w-xl mx-auto my-16 px-4">
+            <div className="p-8 rounded-3xl bg-slate-900/80 border border-rose-500/30 text-center space-y-4 shadow-2xl backdrop-blur-xl">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400">
+                <FolderSearch className="w-7 h-7" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">No se pudo cargar la carpeta</h3>
+                <p className="text-sm text-rose-300 mt-1">{error}</p>
+                <p className="text-xs text-slate-400 mt-2">
+                  Asegúrate de que la carpeta de Google Drive esté configurada como{' '}
+                  <strong className="text-slate-200">"Cualquier persona con el enlace puede ver"</strong>.
+                </p>
+              </div>
+              <div className="flex items-center justify-center gap-3 pt-2">
+                <button
+                  onClick={() => setIsSettingsOpen(true)}
+                  className="px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                >
+                  Cambiar Carpeta
+                </button>
+                <button
+                  onClick={() => loadCatalogData(folderId, true)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs rounded-xl border border-slate-700 transition-colors cursor-pointer"
+                >
+                  Reintentar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Loaded Catalog Content */}
+        {!isLoading && catalog && (
           <>
-            {/* Hero Carousel with root loose images */}
-            {catalog && catalog.carouselImages.length > 0 && !searchQuery && (
+            {/* Hero Carousel (Only shown when not searching and on 'all' category) */}
+            {selectedCategory === 'all' && !searchQuery.trim() && catalog.carouselImages.length > 0 && (
               <HeroCarousel
                 slides={catalog.carouselImages}
-                onOpenImage={handleOpenSlideModal}
-                onExploreClick={handleScrollToCategories}
-                whatsappNumber={whatsappNumber}
+                onSelectSlide={(slide: CarouselSlide) => {
+                  const productCandidate: ProductItem = {
+                    id: slide.id,
+                    name: slide.name,
+                    displayName: slide.title,
+                    imageUrl: slide.imageUrl,
+                    highResUrl: slide.highResUrl,
+                    webViewLink: slide.webViewLink,
+                    categoryId: 'carousel',
+                    categoryName: 'Destacados',
+                    code: 'DEST-000',
+                    description: slide.subtitle,
+                  };
+                  setSelectedProduct(productCandidate);
+                }}
               />
             )}
 
-            {/* Anchor point for smooth scrolling */}
-            <div id="catalog-sections-start" />
+            {/* Category Filter Pills & Search feedback */}
+            <CategoryNav
+              categories={catalog.categories}
+              selectedCategory={selectedCategory}
+              onSelectCategory={setSelectedCategory}
+              totalItemsCount={allCategoryItemCount}
+            />
 
-            {/* Category Navigation Pills */}
-            {catalog && catalog.categories.length > 0 && (
-              <CategoryNav
-                categories={catalog.categories}
-                activeCategoryId={activeCategoryId}
-                onSelectCategory={setActiveCategoryId}
-                totalProducts={catalog.totalProducts}
-              />
-            )}
-
-            {/* Catalog Grid Section Container */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8">
-              {/* Search results indicator */}
-              {searchQuery && (
-                <div className="mb-6 p-4 frosted-card rounded-2xl flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-200">
-                    <FolderSearch className="w-4 h-4 text-cyan-400" />
+            {/* Catalog Content Area */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-14">
+              {/* Search Active Notification Bar */}
+              {searchQuery.trim() && (
+                <div className="flex items-center justify-between bg-slate-900/60 border border-slate-800 rounded-2xl px-5 py-3.5 text-xs">
+                  <div className="flex items-center gap-2 text-slate-300">
+                    <Sparkles className="w-4 h-4 text-cyan-400" />
                     <span>
-                      Resultados para <strong className="text-cyan-300">"{searchQuery}"</strong>: {totalFilteredProducts} producto(s) encontrado(s)
+                      Resultados para <strong className="text-white">"{searchQuery}"</strong>:{' '}
+                      <span className="text-cyan-400 font-bold">{matchingProductsCount}</span> producto(s) encontrado(s)
                     </span>
                   </div>
                   <button
                     onClick={() => setSearchQuery('')}
-                    className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 hover:underline cursor-pointer"
+                    className="text-cyan-400 hover:text-cyan-300 font-medium underline underline-offset-2 cursor-pointer"
                   >
-                    Limpiar búsqueda
+                    Borrar búsqueda
                   </button>
                 </div>
               )}
 
-              {/* Category Sections (Subfolders from Google Drive) */}
-              {filteredCategories.length > 0 ? (
-                <div className="space-y-6">
-                  {filteredCategories.map((category) => (
-                    <CategorySection
-                      key={category.id}
-                      category={category}
-                      onAddToCart={handleAddToCart}
-                      onOpenModal={setSelectedProduct}
-                      cartProductIds={cartProductIds}
-                      whatsappNumber={whatsappNumber}
-                    />
-                  ))}
+              {/* No items found state */}
+              {filteredCategories.length === 0 ? (
+                <div className="py-20 text-center space-y-3 bg-slate-900/40 rounded-3xl border border-slate-800/80 p-8">
+                  <FolderOpen className="w-12 h-12 text-slate-600 mx-auto" />
+                  <h3 className="text-base font-bold text-white">No se encontraron productos</h3>
+                  <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                    {searchQuery.trim()
+                      ? `No hay fotos o productos que coincidan con "${searchQuery}". Intenta con otro término.`
+                      : 'Esta categoría aún no contiene fotos en Google Drive.'}
+                  </p>
+                  {(searchQuery.trim() || selectedCategory !== 'all') && (
+                    <button
+                      onClick={() => {
+                        setSearchQuery('');
+                        setSelectedCategory('all');
+                      }}
+                      className="mt-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-semibold rounded-xl border border-slate-700 transition-colors cursor-pointer"
+                    >
+                      Ver todo el catálogo
+                    </button>
+                  )}
                 </div>
               ) : (
-                <div className="text-center py-16 px-4 frosted-card rounded-3xl my-8">
-                  <FolderOpen className="w-12 h-12 text-cyan-400 mx-auto mb-3" />
-                  <h3 className="text-base font-bold text-white">
-                    No se encontraron productos
-                  </h3>
-                  <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1 mb-6">
-                    {searchQuery
-                      ? `No hay coincidencias para "${searchQuery}". Intenta con otro término o limpia los filtros.`
-                      : 'Esta carpeta de Google Drive aún no tiene imágenes o subcarpetas.'}
-                  </p>
-                  <div className="flex justify-center gap-3">
-                    {searchQuery && (
-                      <button
-                        onClick={() => setSearchQuery('')}
-                        className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold shadow-lg shadow-cyan-950/60 transition-all border border-cyan-400/30 active:scale-95"
-                      >
-                        Ver todos los productos
-                      </button>
-                    )}
-                    <button
-                      onClick={() => setIsSettingsOpen(true)}
-                      className="px-5 py-2.5 rounded-2xl bg-white/10 hover:bg-white/15 text-slate-200 border border-white/15 text-xs font-semibold transition-all cursor-pointer"
-                    >
-                      Cambiar Carpeta Compartida
-                    </button>
-                  </div>
-                </div>
+                /* Category Sections with Product Grids */
+                filteredCategories.map((category) => (
+                  <CategorySection
+                    key={category.id}
+                    category={category}
+                    onAddToCart={handleAddToCart}
+                    onQuickView={setSelectedProduct}
+                    cartProductIds={cartProductIds}
+                    whatsappNumber={whatsappNumber}
+                  />
+                ))
               )}
             </div>
           </>
@@ -419,7 +426,14 @@ export default function App() {
       <Footer
         folderName={catalog?.folderName || 'CATÁLOGO VIRTUAL'}
         totalProducts={catalog?.totalProducts || 0}
+        totalCategories={catalog?.categories?.length || 0}
+        lastSynced={catalog?.lastSynced || new Date()}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        isAdmin={isAdmin}
+        onOpenAdminLogin={() => setIsAdminLoginOpen(true)}
+        onLogoutAdmin={handleLogoutAdmin}
         whatsappNumber={whatsappNumber}
+        onOpenWhatsappSettings={() => setIsWhatsappModalOpen(true)}
       />
 
       {/* Shopping Cart Drawer */}
@@ -430,10 +444,11 @@ export default function App() {
         onUpdateQuantity={handleUpdateQuantity}
         onRemoveItem={handleRemoveFromCart}
         onClearCart={handleClearCart}
+        catalogName={catalog?.folderName || 'Catálogo Virtual'}
         whatsappNumber={whatsappNumber}
       />
 
-      {/* Product Detail Lightbox Modal */}
+      {/* Product Detail Modal */}
       <ProductModal
         product={selectedProduct}
         onClose={() => setSelectedProduct(null)}
@@ -448,7 +463,7 @@ export default function App() {
         onClose={() => setIsSettingsOpen(false)}
         currentFolderId={folderId}
         onSave={handleSaveFolderId}
-        onRefresh={() => loadCatalogData(folderId, token)}
+        onRefresh={() => loadCatalogData(folderId, true)}
         isSyncing={isSyncing}
         lastSynced={catalog?.lastSynced || new Date()}
         isAdmin={isAdmin}
@@ -474,7 +489,7 @@ export default function App() {
         onClose={() => setIsWhatsappModalOpen(false)}
         currentWhatsappNumber={whatsappNumber}
         onSave={handleSaveWhatsappNumber}
-        onRefresh={() => loadCatalogData(folderId, token)}
+        onRefresh={() => loadCatalogData(folderId, true)}
       />
 
       {/* Floating Action Buttons (WhatsApp + Scroll To Top) */}
@@ -483,27 +498,47 @@ export default function App() {
           <button
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             aria-label="Volver arriba"
-            className="p-3 rounded-2xl bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-cyan-400 border border-white/20 backdrop-blur-md shadow-lg shadow-black/50 transition-all active:scale-90"
+            className="w-11 h-11 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 shadow-xl backdrop-blur-md flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer"
           >
-            <ArrowUp className="w-4 h-4" />
+            <ArrowUp className="w-5 h-5" />
           </button>
         )}
 
-        {/* Floating WhatsApp Quick Contact Button */}
+        {/* WhatsApp Direct Inquiries Floating Button */}
         <a
-          href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
-            '¡Hola! 👋 Estoy viendo su catálogo web y deseo hacer una consulta.'
-          )}`}
+          href={`https://wa.me/${whatsappNumber.replace(/[^\d]/g, '')}?text=${encodeURIComponent('¡Hola! Estuve viendo el catálogo virtual y me gustaría hacer una consulta.')}`}
           target="_blank"
-          rel="noreferrer"
-          className="group flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white rounded-2xl shadow-xl shadow-emerald-950/80 hover:scale-105 active:scale-95 transition-all border border-emerald-400/40"
+          rel="noopener noreferrer"
+          aria-label="Contactar por WhatsApp"
+          className="group relative flex items-center gap-2.5 px-4 py-3 rounded-full bg-emerald-500 hover:bg-emerald-400 text-white font-semibold text-xs shadow-2xl shadow-emerald-500/40 transition-all hover:scale-105 active:scale-95 cursor-pointer"
         >
-          <MessageCircle className="w-5 h-5 fill-white shrink-0 animate-bounce" />
-          <span className="text-xs sm:text-sm font-bold tracking-tight pr-1">
-            WhatsApp Directo
-          </span>
+          <span className="absolute -top-1 -right-1 w-3 h-3 bg-white rounded-full animate-ping opacity-75" />
+          <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-300 rounded-full" />
+          <MessageCircle className="w-4 h-4 fill-white shrink-0" />
+          <span className="hidden sm:inline">¿Dudas? Escríbenos</span>
         </a>
       </div>
     </div>
+  );
+}
+
+function FolderSync(props: any) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/>
+      <path d="m11 13 3 3 3-3"/>
+      <path d="M14 16v-6"/>
+    </svg>
   );
 }
