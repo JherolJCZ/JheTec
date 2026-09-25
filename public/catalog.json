@@ -1,0 +1,129 @@
+{
+  "folderId": "1bWzRk9IGpjq3slYMW0ML9Cu0fqpZ_Cm4",
+  "folderName": "WEB SUCULENTAS",
+  "carouselImages": [
+    {
+      "id": "1Xt46wNoPmAWkW0MZs60GCvB67PFdVG66",
+      "name": "img1.jpg",
+      "title": "img1",
+      "subtitle": "Foto destacada de WEB SUCULENTAS",
+      "imageUrl": "https://lh3.googleusercontent.com/d/1Xt46wNoPmAWkW0MZs60GCvB67PFdVG66=s800",
+      "highResUrl": "https://lh3.googleusercontent.com/d/1Xt46wNoPmAWkW0MZs60GCvB67PFdVG66=s1600",
+      "webViewLink": "https://drive.google.com/file/d/1Xt46wNoPmAWkW0MZs60GCvB67PFdVG66/view"
+    },
+    {
+      "id": "1bqYB0gs0WLs6yCfRA5Toeq1cYNFgBvJJ",
+      "name": "img2.jpg",
+      "title": "img2",
+      "subtitle": "Foto destacada de WEB SUCULENTAS",
+      "imageUrl": "https://lh3.googleusercontent.com/d/1bqYB0gs0WLs6yCfRA5Toeq1cYNFgBvJJ=s800",
+      "highResUrl": "https://lh3.googleusercontent.com/d/1bqYB0gs0WLs6yCfRA5Toeq1cYNFgBvJJ=s1600",
+      "webViewLink": "https://drive.google.com/file/d/1bqYB0gs0WLs6yCfRA5Toeq1cYNFgBvJJ/view"
+    },
+    {
+      "id": "1egz0z85OZW0srs-hviX7-hTd59-KmCB_",
+      "name": "Suculenta imbricata.jpg",
+      "title": "Suculenta imbricata",
+      "subtitle": "Foto destacada de WEB SUCULENTAS",
+      "imageUrl": "https://lh3.googleusercontent.com/d/1egz0z85OZW0srs-hviX7-hTd59-KmCB_=s800",
+      "highResUrl": "https://lh3.googleusercontent.com/d/1egz0z85OZW0srs-hviX7-hTd59-KmCB_=s1600",
+      "webViewLink": "https://drive.google.com/file/d/1egz0z85OZW0srs-hviX7-hTd59-KmCB_/view"
+    }
+  ],
+  "categories": [
+    {
+      "id": "1sgOGJFLxSUg-tT0XUJXO5ugzYfITK7oh",
+      "name": "CAPTUS",
+      "displayName": "CAPTUS",
+      "description": "1 producto(s) en esta categoría",
+      "items": [
+        {
+          "id": "1_ajHRow9SViIRPa8_SJvUI4zJtc2PeSO",
+          "name": "img 111111.jpg",
+          "displayName": "img 111111",
+          "imageUrl": "https://lh3.googleusercontent.com/d/1_ajHRow9SViIRPa8_SJvUI4zJtc2PeSO=s800",
+          "highResUrl": "https://lh3.googleusercontent.com/d/1_ajHRow9SViIRPa8_SJvUI4zJtc2PeSO=s1600",
+          "webViewLink": "https://drive.google.com/file/d/1_ajHRow9SViIRPa8_SJvUI4zJtc2PeSO/view",
+          "categoryId": "1sgOGJFLxSUg-tT0XUJXO5ugzYfITK7oh",
+          "categoryName": "CAPTUS",
+          "code": "CAP-001",
+          "description": "Producto catalogado en la colección CAPTUS."
+        }
+      ]
+    },
+    {
+      "id": "1AfBrYHJMcQNSQ9fwBMsO91nhER3ICQgy",
+      "name": "GERANIOS",
+      "displayName": "GERANIOS",
+      "description": "2 producto(s) en esta categoría",
+      "items": [
+        {
+          "id": "1bNnW_OWV-yg8xCv3RI2RUOaE_C8a2CLz",
+          "name": "Geranio.jpg",
+          "displayName": "Geranio",
+          "imageUrl": "https://lh3.googleusercontent.com/d/1bNnW_OWV-yg8xCv3RI2RUOaE_C8a2CLz=s800",
+          "highResUrl": "https://lh3.googleusercontent.com/d/1bNnW_OWV-yg8xCv3RI2RUOaE_C8a2CLz=s1600",
+          "webViewLink": "https://drive.google.com/file/d/1bNnW_OWV-yg8xCv3RI2RUOaE_C8a2CLz/view",
+          "categoryId": "1AfBrYHJMcQNSQ9fwBMsO91nhER3ICQgy",
+          "categoryName": "GERANIOS",
+          "code": "GER-001",
+          "description": "Producto catalogado en la colección GERANIOS."
+        },
+        {
+          "id": "1F38hhgpDkF0ZF_CSUiUY8P61Pl6Fd8x4",
+          "name": "IMGg1.jpg",
+          "displayName": "IMGg1",
+          "imageUrl": "https://lh3.googleusercontent.com/d/1F38hhgpDkF0ZF_CSUiUY8P61Pl6Fd8x4=s800",
+          "highResUrl": "https://lh3.googleusercontent.com/d/1F38hhgpDkF0ZF_CSUiUY8P61Pl6Fd8x4=s1600",
+          "webViewLink": "https://drive.google.com/file/d/1F38hhgpDkF0ZF_CSUiUY8P61Pl6Fd8x4/view",
+          "categoryId": "1AfBrYHJMcQNSQ9fwBMsO91nhER3ICQgy",
+          "categoryName": "GERANIOS",
+          "code": "GER-002",
+          "description": "Producto catalogado en la colección GERANIOS."
+        }
+      ]
+    },
+    {
+      "id": "1o5tic_b3yszC99KCBVujLUgLjcY3MsNH",
+      "name": "ROSAS",
+      "displayName": "ROSAS",
+      "description": "1 producto(s) en esta categoría",
+      "items": [
+        {
+          "id": "15GCE-XpgSqB0OiZMeYTvNiKgXigFGKpX",
+          "name": "imgggg1.jpg",
+          "displayName": "imgggg1",
+          "imageUrl": "https://lh3.googleusercontent.com/d/15GCE-XpgSqB0OiZMeYTvNiKgXigFGKpX=s800",
+          "highResUrl": "https://lh3.googleusercontent.com/d/15GCE-XpgSqB0OiZMeYTvNiKgXigFGKpX=s1600",
+          "webViewLink": "https://drive.google.com/file/d/15GCE-XpgSqB0OiZMeYTvNiKgXigFGKpX/view",
+          "categoryId": "1o5tic_b3yszC99KCBVujLUgLjcY3MsNH",
+          "categoryName": "ROSAS",
+          "code": "ROS-001",
+          "description": "Producto catalogado en la colección ROSAS."
+        }
+      ]
+    },
+    {
+      "id": "19KglfObpaSVnTnWPWPwk8YiIyCVonUG5",
+      "name": "TULIPANES",
+      "displayName": "TULIPANES",
+      "description": "1 producto(s) en esta categoría",
+      "items": [
+        {
+          "id": "1aPTib8ej34q-acpbKOJthHtx-5jcwxHs",
+          "name": "Tulipanes rojos.jpg",
+          "displayName": "Tulipanes rojos",
+          "imageUrl": "https://lh3.googleusercontent.com/d/1aPTib8ej34q-acpbKOJthHtx-5jcwxHs=s800",
+          "highResUrl": "https://lh3.googleusercontent.com/d/1aPTib8ej34q-acpbKOJthHtx-5jcwxHs=s1600",
+          "webViewLink": "https://drive.google.com/file/d/1aPTib8ej34q-acpbKOJthHtx-5jcwxHs/view",
+          "categoryId": "19KglfObpaSVnTnWPWPwk8YiIyCVonUG5",
+          "categoryName": "TULIPANES",
+          "code": "TUL-001",
+          "description": "Producto catalogado en la colección TULIPANES."
+        }
+      ]
+    }
+  ],
+  "totalProducts": 8,
+  "lastSynced": "2026-09-25T17:09:39.960Z"
+}

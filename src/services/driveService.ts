@@ -34,64 +34,274 @@ export const getDriveImageUrl = (fileId: string, thumbnailLink?: string, highRes
   return `https://drive.google.com/thumbnail?id=${fileId}&sz=${highRes ? 'w1600' : 'w800'}`;
 };
 
+export const parseDriveFolderHtml = (
+  html: string,
+  folderId: string
+): {
+  folderId: string;
+  folderName: string;
+  files: { id: string; name: string; parentId: string; mimeType: string }[];
+  folders: { id: string; name: string; parentId: string }[];
+} => {
+  const titleMatch = html.match(/<title>([^<]+)<\/title>/);
+  let folderName = titleMatch
+    ? titleMatch[1].replace(/ - Google Drive$/, '').trim()
+    : 'Catálogo Google Drive';
+
+  const unescaped = html
+    .replace(/\\x22/g, '"')
+    .replace(/\\x5b/g, '[')
+    .replace(/\\x5d/g, ']')
+    .replace(/\\\//g, '/');
+
+  const itemRegex =
+    /\["([0-9a-zA-Z_-]{25,})",\s*\["([0-9a-zA-Z_-]{25,})"\],\s*"([^"]+)",\s*"([^"]+)"/g;
+
+  const files: { id: string; name: string; parentId: string; mimeType: string }[] = [];
+  const folders: { id: string; name: string; parentId: string }[] = [];
+  let match: RegExpExecArray | null;
+  const seenIds = new Set<string>();
+
+  while ((match = itemRegex.exec(unescaped)) !== null) {
+    const [, id, parentId, name, mimeType] = match;
+    if (seenIds.has(id)) continue;
+    seenIds.add(id);
+
+    if (mimeType === 'application/vnd.google-apps.folder') {
+      folders.push({ id, name, parentId });
+    } else if (
+      mimeType.startsWith('image/') ||
+      /\.(jpg|jpeg|png|webp|gif|svg|bmp|jfif)$/i.test(name)
+    ) {
+      files.push({ id, name, parentId, mimeType });
+    }
+  }
+
+  return { folderId, folderName, files, folders };
+};
+
 export const fetchDriveFolderContents = async (
   folderId: string,
   accessToken?: string | null,
   forceRefresh: boolean = false
 ): Promise<DriveCatalogData> => {
   const cleanId = extractFolderId(folderId);
-  const cacheBuster = `_t=${Date.now()}${forceRefresh ? '&force=true' : ''}`;
+  const cacheKey = `drive_catalog_live_cache_${cleanId}`;
 
-  // 1. Try fetching from our full-stack live Google Drive crawler API (works on Node.js and Vercel)
-  try {
-    const apiRes = await fetch(`/api/drive/catalog?folderId=${encodeURIComponent(cleanId)}&${cacheBuster}`, {
-      cache: 'no-store',
-      headers: {
-        Accept: 'application/json',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        Pragma: 'no-cache',
-      },
-    });
-
-    const contentType = apiRes.headers.get('content-type') || '';
-    if (apiRes.ok && contentType.includes('application/json')) {
-      const data = await apiRes.json();
-      if (data && (data.carouselImages?.length > 0 || data.categories?.length > 0)) {
-        const liveCatalog: DriveCatalogData = {
-          folderId: cleanId,
-          folderName: data.folderName || 'WEB SUCULENTAS',
-          carouselImages: (data.carouselImages || []).map((img: any) => ({
-            ...img,
-            imageUrl: img.imageUrl || getDriveImageUrl(img.id, undefined, false),
-            highResUrl: img.highResUrl || getDriveImageUrl(img.id, undefined, true),
-          })),
-          categories: (data.categories || []).map((cat: any) => ({
-            ...cat,
-            items: (cat.items || []).map((item: any) => ({
-              ...item,
-              imageUrl: item.imageUrl || getDriveImageUrl(item.id, undefined, false),
-              highResUrl: item.highResUrl || getDriveImageUrl(item.id, undefined, true),
-            })),
-          })),
-          totalProducts: data.totalProducts || 0,
-          lastSynced: new Date(),
-        };
-
-        // Cache the latest synced catalog in localStorage
-        try {
-          localStorage.setItem(`drive_catalog_live_cache_${cleanId}`, JSON.stringify(liveCatalog));
-        } catch {
-          // Ignore localStorage errors
-        }
-
-        return liveCatalog;
-      }
+  // If forceRefresh requested, clear stale cache
+  if (forceRefresh) {
+    try {
+      localStorage.removeItem(cacheKey);
+    } catch {
+      // ignore
     }
-  } catch (apiErr) {
-    console.warn('Could not reach backend /api/drive/catalog, trying fallback/OAuth...', apiErr);
   }
 
-  // 2. If OAuth accessToken is provided, query Google Drive REST API v3
+  const cacheBuster = `_t=${Date.now()}${forceRefresh ? '&force=true' : ''}`;
+
+  // 1. Try fetching from backend API (/api/drive/catalog or subpath /JheTec/api/drive/catalog)
+  const apiUrls = [
+    `/api/drive/catalog?folderId=${encodeURIComponent(cleanId)}&${cacheBuster}`,
+    `./api/drive/catalog?folderId=${encodeURIComponent(cleanId)}&${cacheBuster}`,
+  ];
+
+  for (const apiUrl of apiUrls) {
+    try {
+      const apiRes = await fetch(apiUrl, {
+        cache: 'no-store',
+        headers: {
+          Accept: 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          Pragma: 'no-cache',
+        },
+      });
+
+      const contentType = apiRes.headers.get('content-type') || '';
+      if (apiRes.ok && contentType.includes('application/json')) {
+        const data = await apiRes.json();
+        if (data && (data.carouselImages?.length > 0 || data.categories?.length > 0)) {
+          const liveCatalog: DriveCatalogData = {
+            folderId: cleanId,
+            folderName: data.folderName || 'WEB SUCULENTAS',
+            carouselImages: (data.carouselImages || []).map((img: any) => ({
+              ...img,
+              imageUrl: img.imageUrl || getDriveImageUrl(img.id, undefined, false),
+              highResUrl: img.highResUrl || getDriveImageUrl(img.id, undefined, true),
+            })),
+            categories: (data.categories || []).map((cat: any) => ({
+              ...cat,
+              items: (cat.items || []).map((item: any) => ({
+                ...item,
+                imageUrl: item.imageUrl || getDriveImageUrl(item.id, undefined, false),
+                highResUrl: item.highResUrl || getDriveImageUrl(item.id, undefined, true),
+              })),
+            })),
+            totalProducts: data.totalProducts || 0,
+            lastSynced: new Date(),
+          };
+
+          try {
+            localStorage.setItem(cacheKey, JSON.stringify(liveCatalog));
+          } catch {
+            // ignore
+          }
+
+          return liveCatalog;
+        }
+      }
+    } catch {
+      // Try next
+    }
+  }
+
+  // 2. Try fetching static catalog.json (built and served in dist/docs on GitHub Pages)
+  const jsonUrls = [
+    `./catalog.json?${cacheBuster}`,
+    `catalog.json?${cacheBuster}`,
+    `/catalog.json?${cacheBuster}`,
+  ];
+
+  for (const jsonUrl of jsonUrls) {
+    try {
+      const jsonRes = await fetch(jsonUrl, {
+        cache: 'no-store',
+        headers: {
+          Accept: 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+        },
+      });
+
+      const contentType = jsonRes.headers.get('content-type') || '';
+      if (jsonRes.ok && contentType.includes('application/json')) {
+        const data = await jsonRes.json();
+        if (data && (data.carouselImages?.length > 0 || data.categories?.length > 0)) {
+          const liveCatalog: DriveCatalogData = {
+            folderId: cleanId,
+            folderName: data.folderName || 'WEB SUCULENTAS',
+            carouselImages: (data.carouselImages || []).map((img: any) => ({
+              ...img,
+              imageUrl: img.imageUrl || getDriveImageUrl(img.id, undefined, false),
+              highResUrl: img.highResUrl || getDriveImageUrl(img.id, undefined, true),
+            })),
+            categories: (data.categories || []).map((cat: any) => ({
+              ...cat,
+              items: (cat.items || []).map((item: any) => ({
+                ...item,
+                imageUrl: item.imageUrl || getDriveImageUrl(item.id, undefined, false),
+                highResUrl: item.highResUrl || getDriveImageUrl(item.id, undefined, true),
+              })),
+            })),
+            totalProducts: data.totalProducts || 0,
+            lastSynced: new Date(data.lastSynced || Date.now()),
+          };
+
+          try {
+            localStorage.setItem(cacheKey, JSON.stringify(liveCatalog));
+          } catch {
+            // ignore
+          }
+
+          return liveCatalog;
+        }
+      }
+    } catch {
+      // Continue to next tier
+    }
+  }
+
+  // 3. Try client-side live scraper via CORS proxies (allows real-time updates directly on GitHub Pages!)
+  const driveFolderUrl = `https://drive.google.com/drive/folders/${cleanId}`;
+  const proxyEndpoints = [
+    `https://corsproxy.io/?url=${encodeURIComponent(driveFolderUrl)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(driveFolderUrl)}`,
+  ];
+
+  for (const proxyUrl of proxyEndpoints) {
+    try {
+      const proxyRes = await fetch(proxyUrl, {
+        headers: {
+          Accept: 'text/html,application/xhtml+xml',
+        },
+      });
+      if (proxyRes.ok) {
+        const html = await proxyRes.text();
+        const parsedRoot = parseDriveFolderHtml(html, cleanId);
+
+        if (parsedRoot.files.length > 0 || parsedRoot.folders.length > 0) {
+          const carouselImages: CarouselSlide[] = parsedRoot.files.map((file) => ({
+            id: file.id,
+            name: file.name,
+            title: cleanProductName(file.name),
+            subtitle: `Foto destacada de ${parsedRoot.folderName}`,
+            imageUrl: getDriveImageUrl(file.id, undefined, false),
+            highResUrl: getDriveImageUrl(file.id, undefined, true),
+            webViewLink: `https://drive.google.com/file/d/${file.id}/view`,
+          }));
+
+          const categories: CategoryFolder[] = [];
+          let totalProducts = 0;
+
+          // Parse subfolders
+          for (const sub of parsedRoot.folders) {
+            const subProxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(`https://drive.google.com/drive/folders/${sub.id}`)}`;
+            try {
+              const subRes = await fetch(subProxyUrl);
+              if (subRes.ok) {
+                const subHtml = await subRes.text();
+                const subParsed = parseDriveFolderHtml(subHtml, sub.id);
+                const items: ProductItem[] = subParsed.files.map((f, idx) => ({
+                  id: f.id,
+                  name: f.name,
+                  displayName: cleanProductName(f.name),
+                  imageUrl: getDriveImageUrl(f.id, undefined, false),
+                  highResUrl: getDriveImageUrl(f.id, undefined, true),
+                  webViewLink: `https://drive.google.com/file/d/${f.id}/view`,
+                  categoryId: sub.id,
+                  categoryName: sub.name,
+                  code: `${sub.name.slice(0, 3).toUpperCase()}-${(idx + 1).toString().padStart(3, '0')}`,
+                  description: `Producto catalogado en la colección ${sub.name}.`,
+                }));
+
+                totalProducts += items.length;
+                categories.push({
+                  id: sub.id,
+                  name: sub.name,
+                  displayName: sub.name,
+                  description: `${items.length} producto(s) en esta categoría`,
+                  items,
+                });
+              }
+            } catch {
+              // ignore subfolder error
+            }
+          }
+
+          if (carouselImages.length > 0 || categories.length > 0) {
+            const scrapedCatalog: DriveCatalogData = {
+              folderId: cleanId,
+              folderName: parsedRoot.folderName,
+              carouselImages,
+              categories,
+              totalProducts: totalProducts + carouselImages.length,
+              lastSynced: new Date(),
+            };
+
+            try {
+              localStorage.setItem(cacheKey, JSON.stringify(scrapedCatalog));
+            } catch {
+              // ignore
+            }
+
+            return scrapedCatalog;
+          }
+        }
+      }
+    } catch {
+      // Try next
+    }
+  }
+
+  // 4. If OAuth accessToken is provided, query Google Drive REST API v3
   if (accessToken) {
     try {
       const headers: HeadersInit = {
@@ -214,23 +424,25 @@ export const fetchDriveFolderContents = async (
     }
   }
 
-  // 3. Check for recently cached catalog in localStorage
-  try {
-    const cachedStr = localStorage.getItem(`drive_catalog_live_cache_${cleanId}`);
-    if (cachedStr) {
-      const cached = JSON.parse(cachedStr);
-      if (cached && (cached.carouselImages?.length > 0 || cached.categories?.length > 0)) {
-        return {
-          ...cached,
-          lastSynced: new Date(cached.lastSynced || Date.now()),
-        };
+  // 5. Check for recently cached catalog in localStorage (only if NOT forceRefresh)
+  if (!forceRefresh) {
+    try {
+      const cachedStr = localStorage.getItem(cacheKey);
+      if (cachedStr) {
+        const cached = JSON.parse(cachedStr);
+        if (cached && (cached.carouselImages?.length > 0 || cached.categories?.length > 0)) {
+          return {
+            ...cached,
+            lastSynced: new Date(cached.lastSynced || Date.now()),
+          };
+        }
       }
+    } catch {
+      // ignore
     }
-  } catch {
-    // ignore
   }
 
-  // 4. Up-to-date fallback containing all categories and items from the user's Google Drive folder
+  // 6. Up-to-date fallback containing all categories and items from the user's Google Drive folder
   return getFallbackCatalogData(cleanId);
 };
 
@@ -294,6 +506,18 @@ export const getFallbackCatalogData = (folderId: string = DEFAULT_FOLDER_ID, cus
       description: 'Colección de geranios seleccionados desde Google Drive',
       items: [
         {
+          id: '1bNnW_OWV-yg8xCv3RI2RUOaE_C8a2CLz',
+          name: 'Geranio.jpg',
+          displayName: 'Geranio',
+          imageUrl: 'https://lh3.googleusercontent.com/d/1bNnW_OWV-yg8xCv3RI2RUOaE_C8a2CLz=s800',
+          highResUrl: 'https://lh3.googleusercontent.com/d/1bNnW_OWV-yg8xCv3RI2RUOaE_C8a2CLz=s1600',
+          webViewLink: 'https://drive.google.com/file/d/1bNnW_OWV-yg8xCv3RI2RUOaE_C8a2CLz/view',
+          categoryId: '1AfBrYHJMcQNSQ9fwBMsO91nhER3ICQgy',
+          categoryName: 'GERANIOS',
+          code: 'GER-001',
+          description: 'Planta de la colección GERANIOS sincronizada en vivo desde Google Drive.',
+        },
+        {
           id: '1F38hhgpDkF0ZF_CSUiUY8P61Pl6Fd8x4',
           name: 'IMGg1.jpg',
           displayName: 'IMGg1',
@@ -302,7 +526,7 @@ export const getFallbackCatalogData = (folderId: string = DEFAULT_FOLDER_ID, cus
           webViewLink: 'https://drive.google.com/file/d/1F38hhgpDkF0ZF_CSUiUY8P61Pl6Fd8x4/view',
           categoryId: '1AfBrYHJMcQNSQ9fwBMsO91nhER3ICQgy',
           categoryName: 'GERANIOS',
-          code: 'GER-001',
+          code: 'GER-002',
           description: 'Planta de la colección GERANIOS sincronizada en vivo desde Google Drive.',
         },
       ],
@@ -354,7 +578,7 @@ export const getFallbackCatalogData = (folderId: string = DEFAULT_FOLDER_ID, cus
     folderName: customName || 'WEB SUCULENTAS',
     carouselImages,
     categories,
-    totalProducts: 4 + carouselImages.length,
+    totalProducts: 5 + carouselImages.length,
     lastSynced: new Date(),
   };
 };
