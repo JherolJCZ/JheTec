@@ -105,7 +105,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={onOpenSettings}
               className="p-2 sm:p-2.5 rounded-2xl bg-white/10 hover:bg-white/15 text-slate-200 hover:text-cyan-400 border border-white/15 shadow-xs transition-all active:scale-95 cursor-pointer"
-              title="Vincular o cambiar link de carpeta compartida"
+              title="Configurar enlace de carpeta compartida"
             >
               <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>

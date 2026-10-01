@@ -11,7 +11,7 @@ export const extractFolderId = (input: string): string => {
   if (match && match[1]) {
     return match[1];
   }
-  const idMatch = trimmed.match(/id=([a-zA-Z0-9_-]+)/);
+  const idMatch = trimmed.match(/[?&]id=([a-zA-Z0-9_-]+)/);
   if (idMatch && idMatch[1]) {
     return idMatch[1];
   }
@@ -53,118 +53,144 @@ export const fetchDriveFolderContents = async (
 
   const cacheBuster = `_t=${Date.now()}${forceRefresh ? '&force=true' : ''}`;
 
-  // 1. Try fetching from live backend API (/api/drive/catalog) - works in Node / Cloud Run / AI Studio preview
-  const apiUrls = [
-    `/api/drive/catalog?folderId=${encodeURIComponent(cleanId)}&${cacheBuster}`,
-    `./api/drive/catalog?folderId=${encodeURIComponent(cleanId)}&${cacheBuster}`,
-  ];
+  const isGitHubPages = typeof window !== 'undefined' && (
+    window.location.hostname.includes('github.io') ||
+    window.location.protocol === 'file:'
+  );
 
-  for (const apiUrl of apiUrls) {
-    try {
-      const apiRes = await fetch(apiUrl, {
-        cache: 'no-store',
-        headers: {
-          Accept: 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          Pragma: 'no-cache',
-        },
-      });
+  // Helper to format raw catalog object
+  const formatCatalog = (data: any): DriveCatalogData => ({
+    folderId: cleanId,
+    folderName: data.folderName || 'WEB SUCULENTAS',
+    carouselImages: (data.carouselImages || []).map((img: any) => ({
+      ...img,
+      imageUrl: img.imageUrl || getDriveImageUrl(img.id, undefined, false),
+      highResUrl: img.highResUrl || getDriveImageUrl(img.id, undefined, true),
+    })),
+    categories: (data.categories || []).map((cat: any) => ({
+      ...cat,
+      items: (cat.items || []).map((item: any) => ({
+        ...item,
+        imageUrl: item.imageUrl || getDriveImageUrl(item.id, undefined, false),
+        highResUrl: item.highResUrl || getDriveImageUrl(item.id, undefined, true),
+      })),
+    })),
+    totalProducts: data.totalProducts || 0,
+    lastSynced: new Date(data.lastSynced || Date.now()),
+  });
 
-      const contentType = apiRes.headers.get('content-type') || '';
-      if (apiRes.ok && contentType.includes('application/json')) {
-        const data = await apiRes.json();
-        if (data && (data.carouselImages?.length > 0 || data.categories?.length > 0)) {
-          const liveCatalog: DriveCatalogData = {
-            folderId: cleanId,
-            folderName: data.folderName || 'WEB SUCULENTAS',
-            carouselImages: (data.carouselImages || []).map((img: any) => ({
-              ...img,
-              imageUrl: img.imageUrl || getDriveImageUrl(img.id, undefined, false),
-              highResUrl: img.highResUrl || getDriveImageUrl(img.id, undefined, true),
-            })),
-            categories: (data.categories || []).map((cat: any) => ({
-              ...cat,
-              items: (cat.items || []).map((item: any) => ({
-                ...item,
-                imageUrl: item.imageUrl || getDriveImageUrl(item.id, undefined, false),
-                highResUrl: item.highResUrl || getDriveImageUrl(item.id, undefined, true),
-              })),
-            })),
-            totalProducts: data.totalProducts || 0,
-            lastSynced: new Date(),
-          };
-
-          try {
-            localStorage.setItem(cacheKey, JSON.stringify(liveCatalog));
-          } catch {
-            // ignore
-          }
-
-          return liveCatalog;
-        }
-      }
-    } catch {
-      // Continue to next source
-    }
-  }
-
-  // 2. Try fetching static catalog.json (built and served in dist/docs on GitHub Pages)
-  const jsonUrls = [
+  // Calculate paths for static catalog.json (essential for instant load on GitHub Pages)
+  const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+  const dirPath = pathname.replace(/\/[^/]*$/, '');
+  const jsonUrls: string[] = [
+    `${dirPath}/catalog.json?${cacheBuster}`,
     `./catalog.json?${cacheBuster}`,
     `catalog.json?${cacheBuster}`,
+    `/JheTec/catalog.json?${cacheBuster}`,
     `/catalog.json?${cacheBuster}`,
   ];
 
-  for (const jsonUrl of jsonUrls) {
-    try {
-      const jsonRes = await fetch(jsonUrl, {
-        cache: 'no-store',
-        headers: {
-          Accept: 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          Pragma: 'no-cache',
-        },
-      });
+  // If running on GitHub Pages (static environment without Node backend):
+  // Query catalog.json IMMEDIATELY without waiting for /api/ timeouts!
+  if (isGitHubPages) {
+    for (const jsonUrl of jsonUrls) {
+      try {
+        const jsonRes = await fetch(jsonUrl, {
+          cache: 'no-store',
+          headers: {
+            Accept: 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            Pragma: 'no-cache',
+          },
+        });
 
-      const contentType = jsonRes.headers.get('content-type') || '';
-      if (jsonRes.ok && contentType.includes('application/json')) {
-        const data = await jsonRes.json();
-        if (data && (data.carouselImages?.length > 0 || data.categories?.length > 0)) {
-          const liveCatalog: DriveCatalogData = {
-            folderId: cleanId,
-            folderName: data.folderName || 'WEB SUCULENTAS',
-            carouselImages: (data.carouselImages || []).map((img: any) => ({
-              ...img,
-              imageUrl: img.imageUrl || getDriveImageUrl(img.id, undefined, false),
-              highResUrl: img.highResUrl || getDriveImageUrl(img.id, undefined, true),
-            })),
-            categories: (data.categories || []).map((cat: any) => ({
-              ...cat,
-              items: (cat.items || []).map((item: any) => ({
-                ...item,
-                imageUrl: item.imageUrl || getDriveImageUrl(item.id, undefined, false),
-                highResUrl: item.highResUrl || getDriveImageUrl(item.id, undefined, true),
-              })),
-            })),
-            totalProducts: data.totalProducts || 0,
-            lastSynced: new Date(data.lastSynced || Date.now()),
-          };
-
-          try {
-            localStorage.setItem(cacheKey, JSON.stringify(liveCatalog));
-          } catch {
-            // ignore
+        const contentType = jsonRes.headers.get('content-type') || '';
+        if (jsonRes.ok && contentType.includes('application/json')) {
+          const data = await jsonRes.json();
+          if (data && (data.carouselImages?.length > 0 || data.categories?.length > 0)) {
+            const liveCatalog = formatCatalog(data);
+            try {
+              localStorage.setItem(cacheKey, JSON.stringify(liveCatalog));
+            } catch {
+              // ignore
+            }
+            return liveCatalog;
           }
-
-          return liveCatalog;
         }
+      } catch {
+        // Continue to next path
       }
-    } catch {
-      // Continue to next tier
     }
   }
 
-  // 3. Check for recently cached catalog in localStorage (only if NOT forceRefresh)
+  // 1. If not GitHub Pages, try fetching from live backend API (/api/drive/catalog) - works in dev server / preview
+  if (!isGitHubPages) {
+    const apiUrls = [
+      `/api/drive/catalog?folderId=${encodeURIComponent(cleanId)}&${cacheBuster}`,
+      `./api/drive/catalog?folderId=${encodeURIComponent(cleanId)}&${cacheBuster}`,
+    ];
+
+    for (const apiUrl of apiUrls) {
+      try {
+        const apiRes = await fetch(apiUrl, {
+          cache: 'no-store',
+          headers: {
+            Accept: 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            Pragma: 'no-cache',
+          },
+        });
+
+        const contentType = apiRes.headers.get('content-type') || '';
+        if (apiRes.ok && contentType.includes('application/json')) {
+          const data = await apiRes.json();
+          if (data && (data.carouselImages?.length > 0 || data.categories?.length > 0)) {
+            const liveCatalog = formatCatalog(data);
+            try {
+              localStorage.setItem(cacheKey, JSON.stringify(liveCatalog));
+            } catch {
+              // ignore
+            }
+            return liveCatalog;
+          }
+        }
+      } catch {
+        // Continue to static fallback
+      }
+    }
+
+    // Try static catalog.json if API was unavailable
+    for (const jsonUrl of jsonUrls) {
+      try {
+        const jsonRes = await fetch(jsonUrl, {
+          cache: 'no-store',
+          headers: {
+            Accept: 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            Pragma: 'no-cache',
+          },
+        });
+
+        const contentType = jsonRes.headers.get('content-type') || '';
+        if (jsonRes.ok && contentType.includes('application/json')) {
+          const data = await jsonRes.json();
+          if (data && (data.carouselImages?.length > 0 || data.categories?.length > 0)) {
+            const liveCatalog = formatCatalog(data);
+            try {
+              localStorage.setItem(cacheKey, JSON.stringify(liveCatalog));
+            } catch {
+              // ignore
+            }
+            return liveCatalog;
+          }
+        }
+      } catch {
+        // Continue
+      }
+    }
+  }
+
+  // 2. Check for cached catalog in localStorage (if not forceRefresh)
   if (!forceRefresh) {
     try {
       const cachedStr = localStorage.getItem(cacheKey);
@@ -182,7 +208,7 @@ export const fetchDriveFolderContents = async (
     }
   }
 
-  // 4. Up-to-date fallback containing all categories and items from the user's Google Drive folder
+  // 3. Up-to-date fallback containing all categories and items from the user's Google Drive folder
   return getFallbackCatalogData(cleanId);
 };
 

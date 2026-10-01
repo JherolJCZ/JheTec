@@ -145,7 +145,7 @@ export const FolderSettingsModal: React.FC<FolderSettingsModalProps> = ({
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-bold text-white">
-                Vincular Carpeta Compartida
+                Carpeta Pública Compartida
               </h2>
               <p className="text-xs text-slate-400 font-medium">
                 Pega el link de la carpeta para cargar archivos y subcarpetas

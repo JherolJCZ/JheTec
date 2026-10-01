@@ -9,7 +9,7 @@ import {
   fetchDriveFolderContents,
   DEFAULT_FOLDER_ID
 } from './services/driveService';
-import { GoogleAuthBanner } from './components/GoogleAuthBanner';
+import { AdminTopBar } from './components/AdminTopBar';
 import { Navbar } from './components/Navbar';
 import { HeroCarousel } from './components/HeroCarousel';
 import { CategoryNav } from './components/CategoryNav';
@@ -243,7 +243,7 @@ export default function App() {
       </div>
 
       {/* Top Admin Bar (Only visible after Admin login) */}
-      <GoogleAuthBanner
+      <AdminTopBar
         onRefresh={() => loadCatalogData(folderId, true)}
         isSyncing={isSyncing}
         onOpenSettings={() => setIsSettingsOpen(true)}
