@@ -44,24 +44,40 @@ export default function App() {
 
   // Admin Mode state
   const [isAdmin, setIsAdmin] = useState<boolean>(() => {
-    return localStorage.getItem('drive_catalog_is_admin') === 'true';
+    try {
+      return localStorage.getItem('drive_catalog_is_admin') === 'true';
+    } catch {
+      return false;
+    }
   });
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState<boolean>(false);
 
   const handleLoginAdminSuccess = () => {
     setIsAdmin(true);
-    localStorage.setItem('drive_catalog_is_admin', 'true');
+    try {
+      localStorage.setItem('drive_catalog_is_admin', 'true');
+    } catch {
+      // ignore
+    }
     setIsAdminLoginOpen(false);
   };
 
   const handleLogoutAdmin = () => {
     setIsAdmin(false);
-    localStorage.removeItem('drive_catalog_is_admin');
+    try {
+      localStorage.removeItem('drive_catalog_is_admin');
+    } catch {
+      // ignore
+    }
   };
 
   // Current Google Drive Folder ID
   const [folderId, setFolderId] = useState<string>(() => {
-    return localStorage.getItem('drive_catalog_folder_id') || DEFAULT_FOLDER_ID;
+    try {
+      return localStorage.getItem('drive_catalog_folder_id') || DEFAULT_FOLDER_ID;
+    } catch {
+      return DEFAULT_FOLDER_ID;
+    }
   });
 
   // App UI & Data state
